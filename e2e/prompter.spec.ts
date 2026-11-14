@@ -40,7 +40,7 @@ const current = (page: Page) => page.locator('[data-current]');
 const drawer = (page: Page) => page.getByRole('dialog', { name: 'Settings' });
 
 async function openSettings(page: Page): Promise<Locator> {
-  await page.locator('.prompter-fab').click();
+  await toolbar(page).getByRole('button', { name: 'Settings' }).click();
   await expect(drawer(page)).toBeVisible();
   return drawer(page);
 }
@@ -170,6 +170,36 @@ test('floating playback controls work', async ({ page }) => {
   await expect(bar.getByRole('button', { name: 'Back to editor' })).toHaveCount(0);
 });
 
+test('shortcuts still work after using the toolbar or settings', async ({ page }) => {
+  await setScript(page, SCRIPT);
+  const bar = toolbar(page);
+
+  // A focused toolbar would normally use arrow keys to move between its buttons.
+  await bar.getByRole('button', { name: 'Next word' }).click();
+  await expect(current(page)).toHaveText('everyone');
+  await page.keyboard.press('ArrowRight');
+  await expect(current(page)).toHaveText('and');
+
+  // Space on the focused mic button toggles once, not twice.
+  await bar.getByRole('button', { name: 'Start listening' }).click();
+  await expect(page.getByText('Listening', { exact: true })).toBeVisible();
+  await page.keyboard.press('Space');
+  await expect(page.getByText('Paused')).toBeVisible();
+
+  // Closing settings returns focus to the prompter.
+  await openSettings(page);
+  await drawer(page).getByRole('button', { name: 'Close' }).click();
+  await expect(drawer(page)).toBeHidden();
+  await page.keyboard.press('ArrowLeft');
+  await expect(current(page)).toHaveText('everyone');
+});
+
+test('settings are only in the floating toolbar', async ({ page }) => {
+  // The toolbar is the single entry point; no separate corner button.
+  await expect(page.getByRole('button', { name: 'Settings' })).toHaveCount(1);
+  await expect(toolbar(page).getByRole('button', { name: 'Settings' })).toBeVisible();
+});
+
 test('keyboard shortcuts', async ({ page }) => {
   await setScript(page, SCRIPT);
   await page.keyboard.press('ArrowRight');
@@ -191,13 +221,8 @@ test('keyboard shortcuts', async ({ page }) => {
   await expect(drawer(page)).toBeVisible();
 });
 
-test('settings open from the floating button and toolbar', async ({ page }) => {
+test('margins apply to the prompter immediately', async ({ page }) => {
   const settings = await openSettings(page);
-  await settings.getByRole('button', { name: 'Close' }).click();
-  await expect(settings).toBeHidden();
-
-  await toolbar(page).getByRole('button', { name: 'Settings' }).click();
-  await expect(settings).toBeVisible();
 
   // Margins apply to the prompter immediately.
   const marginX = settings.getByRole('slider', { name: 'Left and right margin' });
@@ -210,6 +235,54 @@ test('settings open from the floating button and toolbar', async ({ page }) => {
   await marginY.focus();
   await page.keyboard.press('ArrowRight');
   await expect(page.locator('.prompter')).toHaveAttribute('style', /--prompter-margin-y: 1vh/);
+});
+
+test('line wrapping can be switched and is saved', async ({ page }) => {
+  // A long, space-free line makes the two modes lay out differently.
+  await setScript(
+    page,
+    '텔레프롬프터에 오신 것을 환영합니다. 아래 마이크 버튼을 누르고 소리 내어 읽어 보세요.',
+  );
+  const text = page.locator('.prompter-text');
+  await expect(text).toHaveAttribute('data-wrap', 'words');
+  await expect(text).toHaveCSS('word-break', 'keep-all');
+
+  const settings = await openSettings(page);
+  const group = settings.getByRole('radiogroup', { name: 'Line wrapping' });
+  await expect(group.getByRole('radio', { name: 'Keep words whole' })).toBeChecked();
+  await group.getByRole('radio', { name: 'Wrap anywhere' }).click();
+
+  await expect(text).toHaveAttribute('data-wrap', 'anywhere');
+  await expect(text).toHaveCSS('word-break', 'break-all');
+  const stored = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem('teleprompter:settings:v2') ?? '{}'),
+  );
+  expect(stored.lineWrap).toBe('anywhere');
+
+  await page.reload();
+  await expect(page.locator('.prompter-text')).toHaveAttribute('data-wrap', 'anywhere');
+
+  // Reset restores the default.
+  await openSettings(page);
+  await drawer(page).getByRole('button', { name: 'Reset to defaults' }).click();
+  await expect(page.locator('.prompter-text')).toHaveAttribute('data-wrap', 'words');
+});
+
+test('words mode never splits a Korean word across lines', async ({ page }) => {
+  await setScript(page, '가나다라마바사아자차카타파하 '.repeat(20).trim());
+  // Each span is one word; in words mode no word may start on one line and end on another.
+  const split = await page
+    .locator('.prompter-word')
+    .evaluateAll((spans) => spans.some((el) => el.getClientRects().length > 1));
+  expect(split).toBe(false);
+
+  const settings = await openSettings(page);
+  await settings.getByRole('radio', { name: 'Wrap anywhere' }).click();
+  await settings.getByRole('button', { name: 'Close' }).click();
+  const splitAnywhere = await page
+    .locator('.prompter-word')
+    .evaluateAll((spans) => spans.some((el) => el.getClientRects().length > 1));
+  expect(splitAnywhere).toBe(true);
 });
 
 test('settings persist in localStorage', async ({ page }) => {
@@ -304,7 +377,7 @@ test.describe('on a touch device', () => {
   }
 
   async function openSettingsByTouch(page: Page) {
-    await page.locator('.prompter-fab').tap();
+    await toolbar(page).getByRole('button', { name: 'Settings' }).tap();
     await expect(drawer(page)).toBeVisible();
     await settled(page);
   }

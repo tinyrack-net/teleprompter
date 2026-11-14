@@ -89,3 +89,14 @@ describe('language detection', () => {
     expect(resolveLanguage('auto', () => null)).toBe('en');
   });
 });
+
+describe('line wrap setting', () => {
+  it('defaults to keeping words whole', () => {
+    expect(DEFAULT_SETTINGS.lineWrap).toBe('words');
+  });
+
+  it('accepts known modes and repairs unknown ones', () => {
+    expect(sanitizeSettings({ lineWrap: 'anywhere' }).lineWrap).toBe('anywhere');
+    expect(sanitizeSettings({ lineWrap: 'hyphenate' }).lineWrap).toBe('words');
+  });
+});

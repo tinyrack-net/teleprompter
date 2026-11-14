@@ -14,9 +14,12 @@
 @import "@tinyrack/ui/components/button.css";
 @import "@tinyrack/ui/components/drawer.css";
 @import "@tinyrack/ui/components/field.css";
+@import "@tinyrack/ui/components/fieldset.css";
 @import "@tinyrack/ui/components/icon-button.css";
 @import "@tinyrack/ui/components/native-select.css";
 @import "@tinyrack/ui/components/progress.css";
+@import "@tinyrack/ui/components/radio.css";
+@import "@tinyrack/ui/components/radio-group.css";
 @import "@tinyrack/ui/components/separator.css";
 @import "@tinyrack/ui/components/slider.css";
 @import "@tinyrack/ui/components/switch.css";
@@ -101,13 +104,31 @@ body {
   font-size: var(--prompter-font-size);
   font-weight: var(--tinyrack-weight-medium);
   line-height: var(--tinyrack-leading-lg);
-  word-break: keep-all;
-  overflow-wrap: anywhere;
 }
 
-.prompter-text[data-lang="ja"] {
-  word-break: normal;
+/*
+ * Keep words whole: never break inside a word. Korean breaks only at spaces;
+ * Japanese, which has no spaces, keeps its phrases together with
+ * word-break: auto-phrase where supported. A word longer than the line still
+ * wraps instead of overflowing.
+ */
+.prompter-text[data-wrap="words"] {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
   line-break: strict;
+}
+
+@supports (word-break: auto-phrase) {
+  .prompter-text[data-wrap="words"][data-lang="ja"] {
+    word-break: auto-phrase;
+  }
+}
+
+/* Wrap anywhere: break at any character so every line is filled. */
+.prompter-text[data-wrap="anywhere"] {
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  line-break: anywhere;
 }
 
 .prompter[data-mirror] .prompter-text {
@@ -155,24 +176,6 @@ body {
 }
 
 /* ---------- Floating controls ---------- */
-
-.prompter-fab.prompter-fab {
-  position: absolute;
-  top: var(--tinyrack-space-lg);
-  right: var(--tinyrack-space-lg);
-  z-index: var(--tinyrack-layer-chrome);
-  background: var(--floating-surface);
-  backdrop-filter: var(--floating-blur);
-  border-color: var(--tinyrack-border);
-  border-radius: var(--tinyrack-radius-full);
-  opacity: var(--tinyrack-opacity-hover);
-}
-
-.prompter-fab.prompter-fab:hover,
-.prompter-fab.prompter-fab:focus-visible {
-  background: var(--floating-surface-hover);
-  opacity: 1;
-}
 
 .prompter-dock {
   position: absolute;
@@ -281,4 +284,9 @@ body {
   .prompter-toolbar.prompter-toolbar {
     transition: none;
   }
+}
+
+/* The prompter root only receives focus programmatically; it needs no ring. */
+.prompter:focus {
+  outline: none;
 }

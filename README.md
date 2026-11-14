@@ -10,7 +10,7 @@ Live at [prompter.tinyrack.net](https://prompter.tinyrack.net).
 - Phrase-based matching that tolerates partial words and Korean particles, with `Intl.Segmenter` word splitting for Japanese
 - `[Bracketed]` text is displayed but skipped while reading
 - Click any word to jump to it
-- Floating, semi-transparent playback controls and a floating settings button
+- Floating, semi-transparent playback controls, including the settings button
 - Opens paused, so the microphone is only requested when you press the mic button
 - Editing the script keeps your reading position
 - Settings (saved in `localStorage`):
@@ -18,6 +18,7 @@ Live at [prompter.tinyrack.net](https://prompter.tinyrack.net).
   - Interface language: auto-detect (browser language), English, Korean, Japanese
   - Speech language: auto-detect (from the script), English, Korean, Japanese
   - Font size, left/right margin, top/bottom margin, mirror mode
+  - Line wrapping: keep words whole (default) or wrap at any character
 
 ## Keyboard shortcuts
 

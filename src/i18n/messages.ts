@@ -33,6 +33,17 @@ const en = {
   marginY: 'Top and bottom margin',
   mirror: 'Mirror text',
   mirrorHint: 'Flip horizontally for teleprompter glass.',
+  lineWrap: 'Line wrapping',
+  lineWrapOption: {
+    words: {
+      label: 'Keep words whole',
+      description: 'Lines break only between words. Easier to read.',
+    },
+    anywhere: {
+      label: 'Wrap anywhere',
+      description: 'Lines break at any character, so every line is filled.',
+    },
+  },
   resetSettings: 'Reset to defaults',
 
   playback: 'Playback controls',
@@ -82,6 +93,17 @@ const ko: Messages = {
   marginY: '상하 여백',
   mirror: '좌우 반전',
   mirrorHint: '프롬프터 유리에 비출 때 사용해요.',
+  lineWrap: '줄바꿈',
+  lineWrapOption: {
+    words: {
+      label: '단어 단위',
+      description: '단어 사이에서만 줄을 바꿔요. 읽기 편해요.',
+    },
+    anywhere: {
+      label: '글자 단위',
+      description: '어느 글자에서나 줄을 바꿔 한 줄을 꽉 채워요.',
+    },
+  },
   resetSettings: '기본값으로 초기화',
 
   playback: '재생 컨트롤',
@@ -129,6 +151,17 @@ const ja: Messages = {
   marginY: '上下の余白',
   mirror: '左右反転',
   mirrorHint: 'プロンプター用ガラスに映すときに使います。',
+  lineWrap: '改行',
+  lineWrapOption: {
+    words: {
+      label: '単語ごと',
+      description: '単語の間でのみ改行します。読みやすくなります。',
+    },
+    anywhere: {
+      label: '文字ごと',
+      description: 'どの文字でも改行し、各行をいっぱいに使います。',
+    },
+  },
   resetSettings: '初期設定に戻す',
 
   playback: '再生コントロール',

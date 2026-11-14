@@ -1,10 +1,9 @@
 import { TRAlert } from '@tinyrack/ui/components/alert';
 import { TRButton } from '@tinyrack/ui/components/button';
-import { TRIconButton } from '@tinyrack/ui/components/icon-button';
 import { TRProgress } from '@tinyrack/ui/components/progress';
 import { TRText } from '@tinyrack/ui/components/text';
-import { PencilIcon, SettingsIcon } from 'lucide-react';
-import { type CSSProperties, useEffect, useMemo, useState } from 'react';
+import { PencilIcon } from 'lucide-react';
+import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
 import { SettingsDrawer } from '../../components/settings-drawer';
 import { useI18n } from '../../i18n/i18n';
 import { SAMPLE_SCRIPT } from '../../i18n/messages';
@@ -25,6 +24,7 @@ export function PrompterPage() {
   const [script] = useScript(SAMPLE_SCRIPT[uiLanguage]);
   const [settings] = useSettings();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const rootRef = useRef<HTMLElement>(null);
 
   const detected = useMemo(() => detectScriptLanguage(script) ?? uiLanguage, [script, uiLanguage]);
   const speechLanguage = resolveLanguage(settings.speechLanguage, () => detected);
@@ -56,10 +56,14 @@ export function PrompterPage() {
       });
       if (!action) return;
       e.preventDefault();
+      // The toolbar uses arrow keys to move between its buttons; the prompter
+      // shortcuts take priority so they work after clicking a toolbar button.
+      e.stopPropagation();
       action();
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    // Capture phase: run before focused widgets (the toolbar) handle the key.
+    window.addEventListener('keydown', onKey, { capture: true });
+    return () => window.removeEventListener('keydown', onKey, { capture: true });
   }, [settingsOpen, empty, toggle, next, prev, restart]);
 
   const done = countSpoken(tokens, voice.cursor);
@@ -70,7 +74,14 @@ export function PrompterPage() {
   } as CSSProperties;
 
   return (
-    <main className="prompter" style={style} data-mirror={settings.mirror ? '' : undefined}>
+    <main
+      ref={rootRef}
+      className="prompter"
+      style={style}
+      data-mirror={settings.mirror ? '' : undefined}
+      // Focus target after the settings drawer closes, so shortcuts keep working.
+      tabIndex={-1}
+    >
       <TRProgress.Root
         className="prompter-progress"
         aria-label={t.progress}
@@ -102,6 +113,7 @@ export function PrompterPage() {
             tokens={tokens}
             cursor={voice.cursor}
             language={speechLanguage}
+            wrap={settings.lineWrap}
             onWordClick={voice.jumpTo}
           />
         </div>
@@ -153,16 +165,6 @@ export function PrompterPage() {
         ) : null}
       </div>
 
-      <TRIconButton
-        className="prompter-fab"
-        appearance="ghost"
-        aria-label={t.settings}
-        title={t.settings}
-        onClick={() => setSettingsOpen(true)}
-      >
-        <SettingsIcon aria-hidden="true" />
-      </TRIconButton>
-
       <PlaybackToolbar
         listening={voice.listening}
         canListen={!empty && voice.error?.code !== 'unsupported'}
@@ -178,6 +180,7 @@ export function PrompterPage() {
         onOpenChange={setSettingsOpen}
         detectedSpeechLanguage={detected}
         focusScript={empty}
+        returnFocus={rootRef}
       />
     </main>
   );

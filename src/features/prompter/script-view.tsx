@@ -1,10 +1,12 @@
 import { memo, useEffect, useLayoutEffect, useRef } from 'react';
 import type { Token } from '../../lib/script';
+import type { LineWrap } from '../../lib/settings';
 
 interface ScriptViewProps {
   tokens: Token[];
   cursor: number;
   language: string;
+  wrap: LineWrap;
   onWordClick: (index: number) => void;
 }
 
@@ -12,7 +14,7 @@ interface ScriptViewProps {
  * Renders the script once and updates word states directly on the DOM, so a
  * cursor move costs O(distance moved) instead of re-rendering every word.
  */
-export function ScriptView({ tokens, cursor, language, onWordClick }: ScriptViewProps) {
+export function ScriptView({ tokens, cursor, language, wrap, onWordClick }: ScriptViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const previous = useRef<number | null>(null);
 
@@ -57,6 +59,7 @@ export function ScriptView({ tokens, cursor, language, onWordClick }: ScriptView
       ref={containerRef}
       className="prompter-text"
       data-lang={language}
+      data-wrap={wrap}
       onClick={(event) => {
         const el = (event.target as HTMLElement).closest<HTMLElement>('[data-word]');
         if (el?.dataset.index) onWordClick(Number(el.dataset.index));

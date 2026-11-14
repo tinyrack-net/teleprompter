@@ -1,14 +1,18 @@
 import { TRButton } from '@tinyrack/ui/components/button';
 import { TRDrawer } from '@tinyrack/ui/components/drawer';
 import { TRField } from '@tinyrack/ui/components/field';
+import { TRFieldset } from '@tinyrack/ui/components/fieldset';
 import { TRIconButton } from '@tinyrack/ui/components/icon-button';
 import { TRNativeSelect } from '@tinyrack/ui/components/native-select';
+import { TRRadio } from '@tinyrack/ui/components/radio';
+import { TRRadioGroup } from '@tinyrack/ui/components/radio-group';
 import { TRSeparator } from '@tinyrack/ui/components/separator';
 import { TRSlider } from '@tinyrack/ui/components/slider';
 import { TRSwitch } from '@tinyrack/ui/components/switch';
 import { TRText } from '@tinyrack/ui/components/text';
 import { TRTextarea } from '@tinyrack/ui/components/textarea';
 import { XIcon } from 'lucide-react';
+import type React from 'react';
 import { type ReactNode, useRef } from 'react';
 import { useI18n } from '../i18n/i18n';
 import { SAMPLE_SCRIPT } from '../i18n/messages';
@@ -20,7 +24,7 @@ import {
   type Language,
   type LanguagePreference,
 } from '../lib/language';
-import { DEFAULT_SETTINGS, RANGES } from '../lib/settings';
+import { DEFAULT_SETTINGS, isLineWrap, LINE_WRAPS, RANGES } from '../lib/settings';
 import { useScript, useSettings } from '../state/settings-store';
 
 interface SettingsDrawerProps {
@@ -30,6 +34,8 @@ interface SettingsDrawerProps {
   detectedSpeechLanguage: Language;
   /** Move focus to the script field when the drawer opens. */
   focusScript?: boolean;
+  /** Element that receives focus when the drawer closes. */
+  returnFocus?: React.RefObject<HTMLElement | null>;
 }
 
 export function SettingsDrawer({
@@ -37,6 +43,7 @@ export function SettingsDrawer({
   onOpenChange,
   detectedSpeechLanguage,
   focusScript = false,
+  returnFocus,
 }: SettingsDrawerProps) {
   const { t, language } = useI18n();
   const [settings, update] = useSettings();
@@ -48,7 +55,24 @@ export function SettingsDrawer({
       <TRDrawer.Portal>
         <TRDrawer.Backdrop />
         <TRDrawer.Viewport>
-          <TRDrawer.Popup initialFocus={focusScript ? scriptRef : true}>
+          {/*
+            Return focus to the prompter, not the toolbar's settings button:
+            arrow keys on a focused toolbar move between its buttons, which
+            would swallow the word-navigation shortcuts.
+          */}
+          <TRDrawer.Popup
+            initialFocus={focusScript ? scriptRef : true}
+            finalFocus={
+              returnFocus
+                ? () => {
+                    // Base UI moves focus into the first tabbable child (a toolbar
+                    // button), so focus the target itself and skip the default.
+                    returnFocus.current?.focus({ preventScroll: true });
+                    return false;
+                  }
+                : true
+            }
+          >
             <TRDrawer.Content className="flex flex-col gap-tinyrack-lg">
               <header className="flex items-start justify-between gap-tinyrack-md">
                 <div className="flex flex-col gap-tinyrack-2xs">
@@ -139,6 +163,32 @@ export function SettingsDrawer({
                   onChange={(marginY) => update({ marginY })}
                 />
                 <TRField.Root>
+                  <TRFieldset.Root>
+                    <TRFieldset.Legend>{t.lineWrap}</TRFieldset.Legend>
+                    <TRRadioGroup
+                      name="lineWrap"
+                      value={settings.lineWrap}
+                      onValueChange={(value) => {
+                        if (isLineWrap(value)) update({ lineWrap: value });
+                      }}
+                    >
+                      {LINE_WRAPS.map((wrap) => (
+                        <TRField.Item key={wrap} className="items-start">
+                          <TRRadio.Root value={wrap}>
+                            <TRRadio.Indicator aria-hidden="true" />
+                          </TRRadio.Root>
+                          <div className="flex flex-col gap-tinyrack-2xs">
+                            <TRField.Label>{t.lineWrapOption[wrap].label}</TRField.Label>
+                            <TRField.Description>
+                              {t.lineWrapOption[wrap].description}
+                            </TRField.Description>
+                          </div>
+                        </TRField.Item>
+                      ))}
+                    </TRRadioGroup>
+                  </TRFieldset.Root>
+                </TRField.Root>
+                <TRField.Root>
                   <TRField.Item className="items-center">
                     <TRSwitch.Root
                       name="mirror"
@@ -163,6 +213,7 @@ export function SettingsDrawer({
                     marginX: DEFAULT_SETTINGS.marginX,
                     marginY: DEFAULT_SETTINGS.marginY,
                     mirror: DEFAULT_SETTINGS.mirror,
+                    lineWrap: DEFAULT_SETTINGS.lineWrap,
                   })
                 }
               >
