@@ -23,8 +23,8 @@ body {
   height: 100%;
 }
 
-/* biome-ignore lint/complexity/noImportantStyles: the hidden attribute must win over component display rules */
 [hidden] {
+  /* biome-ignore lint/complexity/noImportantStyles: the hidden attribute must win over component display rules */
   display: none !important;
 }
 
