@@ -179,6 +179,63 @@ test('interface language defaults to auto-detect and can be changed', async ({ p
   await expect(page.getByRole('heading', { name: 'テレプロンプター' })).toBeVisible();
 });
 
+test.describe('on a touch device', () => {
+  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+
+  /** Waits for the drawer open transition to finish before gesturing. */
+  const settled = (page: Page) =>
+    page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running'));
+
+  /** Drags horizontally with real touch events (Playwright has no touch-drag helper). */
+  async function touchDrag(page: Page, from: { x: number; y: number }, dx: number) {
+    const cdp = await page.context().newCDPSession(page);
+    const point = (x: number) => [{ x, y: from.y }];
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: point(from.x) });
+    const steps = 15;
+    for (let i = 1; i <= steps; i++) {
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: point(from.x + (dx * i) / steps),
+      });
+      // Pace the moves like a real finger (~60 Hz) so gesture code sees velocity.
+      await page.waitForTimeout(16);
+    }
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  }
+
+  test('dragging a slider adjusts it without swiping the drawer', async ({ page }) => {
+    await page.getByRole('button', { name: 'Settings' }).tap();
+    const drawer = page.getByRole('dialog', { name: 'Settings' });
+    await expect(drawer).toBeVisible();
+    await settled(page);
+    const popup = page.locator('.tr-drawer-popup');
+    const startLeft = (await popup.boundingBox())?.x;
+
+    const slider = drawer.getByRole('slider', { name: 'Left and right margin' });
+    const before = Number(await slider.inputValue());
+    const control = drawer.locator('.tr-slider-control').nth(1);
+    const box = await control.boundingBox();
+    if (!box) throw new Error('slider control not found');
+    await touchDrag(page, { x: box.x + box.width * 0.2, y: box.y + box.height / 2 }, 180);
+
+    await expect.poll(async () => Number(await slider.inputValue())).toBeGreaterThan(before);
+    expect(await popup.getAttribute('data-swiping')).toBeNull();
+    expect((await popup.boundingBox())?.x).toBe(startLeft);
+    await expect(drawer).toBeVisible();
+  });
+
+  test('swiping the drawer elsewhere still dismisses it', async ({ page }) => {
+    await page.getByRole('button', { name: 'Settings' }).tap();
+    const drawer = page.getByRole('dialog', { name: 'Settings' });
+    await expect(drawer).toBeVisible();
+    await settled(page);
+    const title = await drawer.getByRole('heading', { name: 'Settings' }).boundingBox();
+    if (!title) throw new Error('drawer title not found');
+    await touchDrag(page, { x: title.x + 10, y: title.y + title.height / 2 }, 300);
+    await expect(drawer).toBeHidden();
+  });
+});
+
 test.describe('with a Korean browser', () => {
   test.use({ locale: 'ko-KR' });
 

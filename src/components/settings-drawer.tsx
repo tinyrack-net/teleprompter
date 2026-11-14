@@ -195,7 +195,11 @@ function RangeField(props: {
     >
       <TRSlider.Label>{props.label}</TRSlider.Label>
       <TRSlider.Value>{(formatted) => `${formatted[0]}${props.unit}`}</TRSlider.Value>
-      <TRSlider.Control>
+      {/*
+        A horizontal slider drag would otherwise also swipe the drawer, which
+        is dismissed by swiping right. This opts the control out of swipe dismissal.
+      */}
+      <TRSlider.Control data-base-ui-swipe-ignore="">
         <TRSlider.Track>
           <TRSlider.Indicator />
         </TRSlider.Track>
