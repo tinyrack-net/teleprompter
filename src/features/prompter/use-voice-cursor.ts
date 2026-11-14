@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { match, toSpokenWords } from '../../lib/matcher';
-import { nextSpoken, prevSpoken, type Token } from '../../lib/script';
+import { nextSpoken, prevSpoken, remapCursor, type Token } from '../../lib/script';
 import { isSpeechSupported, Speech, type SpeechErrorCode } from '../../lib/speech';
 
 export interface SpeechError {
@@ -27,8 +27,17 @@ export function useVoiceCursor(tokens: Token[], locale: string) {
   const ignoreBefore = useRef(0);
   const lastWordCount = useRef(0);
 
-  tokensRef.current = tokens;
   localeRef.current = locale;
+
+  // The script was edited: keep the reader on the same word and forget the
+  // transcript so far, which was aligned with the old text.
+  if (tokensRef.current !== tokens) {
+    const remapped = remapCursor(tokensRef.current, tokens, cursorRef.current);
+    tokensRef.current = tokens;
+    cursorRef.current = remapped;
+    ignoreBefore.current = lastWordCount.current;
+    if (remapped !== cursor) setCursorState(remapped);
+  }
 
   const setCursor = useCallback((index: number) => {
     const next = Math.max(0, Math.min(index, tokensRef.current.length));

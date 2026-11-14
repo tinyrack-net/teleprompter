@@ -42,28 +42,10 @@ body {
   font-family: var(--tinyrack-font-body);
 }
 
-/* ---------- Editor ---------- */
+/* ---------- Settings ---------- */
 
-.editor {
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  gap: var(--tinyrack-space-xl);
-  max-width: var(--tinyrack-mdx-content-width);
-  min-height: 100%;
-  margin-inline: auto;
-  padding: var(--tinyrack-space-2xl) var(--tinyrack-space-lg);
-}
-
-.editor-field {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-}
-
-.editor-textarea {
-  flex: 1;
-  min-height: calc(var(--tinyrack-measure-xl) + var(--tinyrack-measure-xs));
+.settings-script {
+  min-height: var(--tinyrack-measure-lg);
   resize: vertical;
   line-height: var(--tinyrack-leading-lg);
 }
@@ -267,6 +249,18 @@ body {
 .prompter-heard {
   min-width: 0;
   max-width: var(--tinyrack-measure-xl);
+}
+
+.prompter-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--tinyrack-space-md);
+  padding: var(--tinyrack-space-xl);
+  text-align: center;
 }
 
 .prompter-alert {

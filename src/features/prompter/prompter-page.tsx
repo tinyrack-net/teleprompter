@@ -3,9 +3,8 @@ import { TRButton } from '@tinyrack/ui/components/button';
 import { TRIconButton } from '@tinyrack/ui/components/icon-button';
 import { TRProgress } from '@tinyrack/ui/components/progress';
 import { TRText } from '@tinyrack/ui/components/text';
-import { SettingsIcon } from 'lucide-react';
+import { PencilIcon, SettingsIcon } from 'lucide-react';
 import { type CSSProperties, useEffect, useMemo, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router';
 import { SettingsDrawer } from '../../components/settings-drawer';
 import { useI18n } from '../../i18n/i18n';
 import { SAMPLE_SCRIPT } from '../../i18n/messages';
@@ -16,11 +15,15 @@ import { PlaybackToolbar } from './playback-toolbar';
 import { ScriptView } from './script-view';
 import { useVoiceCursor } from './use-voice-cursor';
 
+/**
+ * The app's only screen. It opens paused: recognition starts from the mic
+ * button, so the permission prompt follows a user gesture (required by iOS
+ * Safari and less surprising everywhere else).
+ */
 export function PrompterPage() {
   const { t, language: uiLanguage } = useI18n();
   const [script] = useScript(SAMPLE_SCRIPT[uiLanguage]);
   const [settings] = useSettings();
-  const navigate = useNavigate();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const detected = useMemo(() => detectScriptLanguage(script) ?? uiLanguage, [script, uiLanguage]);
@@ -28,32 +31,36 @@ export function PrompterPage() {
   const locale = SPEECH_LOCALE[speechLanguage];
   const tokens = useMemo(() => parseScript(script, speechLanguage), [script, speechLanguage]);
   const total = useMemo(() => countSpoken(tokens), [tokens]);
+  const empty = total === 0;
 
   const voice = useVoiceCursor(tokens, locale);
-  const { start, stop, toggle, next, prev, restart } = voice;
+  const { stop, toggle, next, prev, restart } = voice;
 
-  // Start listening as soon as the prompter opens.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: run once on mount
+  // An emptied script has nothing to follow.
   useEffect(() => {
-    start();
-    return () => stop();
-  }, []);
+    if (empty) stop();
+  }, [empty, stop]);
 
   // Keyboard shortcuts (ignored while the settings drawer is open).
   useEffect(() => {
     if (settingsOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLElement && e.target.closest('input, select, textarea')) return;
-      const action = keyAction(e.key, { toggle, next, prev, restart, back: () => navigate('/') });
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const action = keyAction(e.key, {
+        toggle: () => !empty && toggle(),
+        next,
+        prev,
+        restart,
+        settings: () => setSettingsOpen(true),
+      });
       if (!action) return;
       e.preventDefault();
       action();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [settingsOpen, toggle, next, prev, restart, navigate]);
-
-  if (total === 0) return <Navigate to="/" replace />;
+  }, [settingsOpen, empty, toggle, next, prev, restart]);
 
   const done = countSpoken(tokens, voice.cursor);
   const style = {
@@ -68,22 +75,37 @@ export function PrompterPage() {
         className="prompter-progress"
         aria-label={t.progress}
         value={done}
-        max={total}
+        max={Math.max(total, 1)}
       >
         <TRProgress.Track>
           <TRProgress.Indicator />
         </TRProgress.Track>
       </TRProgress.Root>
 
-      <div className="prompter-scroller" data-scroller="">
-        <div className="prompter-reading-line" aria-hidden="true" />
-        <ScriptView
-          tokens={tokens}
-          cursor={voice.cursor}
-          language={speechLanguage}
-          onWordClick={voice.jumpTo}
-        />
-      </div>
+      {empty ? (
+        <div className="prompter-empty">
+          <TRText as="h1" variant="headingLg">
+            {t.emptyTitle}
+          </TRText>
+          <TRText as="p" color="muted">
+            {t.emptyBody}
+          </TRText>
+          <TRButton intent="primary" onClick={() => setSettingsOpen(true)}>
+            <PencilIcon aria-hidden="true" />
+            {t.editScript}
+          </TRButton>
+        </div>
+      ) : (
+        <div className="prompter-scroller" data-scroller="">
+          <div className="prompter-reading-line" aria-hidden="true" />
+          <ScriptView
+            tokens={tokens}
+            cursor={voice.cursor}
+            language={speechLanguage}
+            onWordClick={voice.jumpTo}
+          />
+        </div>
+      )}
 
       {voice.error ? (
         <div className="prompter-alert">
@@ -143,8 +165,7 @@ export function PrompterPage() {
 
       <PlaybackToolbar
         listening={voice.listening}
-        canListen={voice.error?.code !== 'unsupported'}
-        onBack={() => navigate('/')}
+        canListen={!empty && voice.error?.code !== 'unsupported'}
         onRestart={restart}
         onPrev={prev}
         onToggle={toggle}
@@ -156,12 +177,13 @@ export function PrompterPage() {
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
         detectedSpeechLanguage={detected}
+        focusScript={empty}
       />
     </main>
   );
 }
 
-type PrompterActions = Record<'toggle' | 'next' | 'prev' | 'restart' | 'back', () => void>;
+type PrompterActions = Record<'toggle' | 'next' | 'prev' | 'restart' | 'settings', () => void>;
 
 function keyAction(key: string, actions: PrompterActions): (() => void) | null {
   switch (key) {
@@ -175,8 +197,10 @@ function keyAction(key: string, actions: PrompterActions): (() => void) | null {
       return actions.prev;
     case 'Home':
       return actions.restart;
-    case 'Escape':
-      return actions.back;
+    case ',':
+    case 's':
+    case 'S':
+      return actions.settings;
     default:
       return null;
   }

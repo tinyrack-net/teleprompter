@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { match, similar, toSpokenWords } from './matcher';
-import { countSpoken, nextSpoken, parseScript, prevSpoken } from './script';
+import { countSpoken, nextSpoken, parseScript, prevSpoken, remapCursor } from './script';
 
 const spoken = (s: string, locale = 'en') => toSpokenWords(s, locale);
 const words = (s: string, locale = 'en') =>
@@ -105,5 +105,64 @@ describe('match', () => {
     const t = parseScript('今日は新しいテレプロンプターを紹介します', 'ja');
     const next = match(t, 0, spoken('今日は新しい', 'ja'));
     expect(t[next ?? -1]?.text).toBe('テレ');
+  });
+});
+
+describe('remapCursor', () => {
+  const cursorOn = (tokens: ReturnType<typeof parseScript>, word: string) =>
+    tokens.findIndex((t) => t.text === word);
+  const remap = (before: string, after: string, word: string) => {
+    const a = parseScript(before);
+    const b = parseScript(after);
+    const next = remapCursor(a, b, cursorOn(a, word));
+    return b[next]?.text ?? '<end>';
+  };
+
+  it('keeps the word when text is edited after it', () => {
+    expect(remap('one two three four', 'one two three four five', 'three')).toBe('three');
+  });
+
+  it('keeps the word when text is inserted before it', () => {
+    expect(remap('one two three four', 'zero, one two three four', 'three')).toBe('three');
+    expect(remap('one two three four', 'one two\n\nthree four', 'three')).toBe('three');
+  });
+
+  it('keeps the word when text is removed before it', () => {
+    expect(remap('one two three four', 'one three four', 'three')).toBe('three');
+  });
+
+  it('moves to the start of the edit when the word itself changes', () => {
+    expect(remap('one two three four', 'one two TRES four', 'three')).toBe('TRES');
+  });
+
+  it('handles an end-of-script cursor and an emptied script', () => {
+    const a = parseScript('one two');
+    expect(remapCursor(a, parseScript('one two three'), a.length)).toBe(
+      parseScript('one two three').findIndex((t) => t.text === 'three'),
+    );
+    expect(remapCursor(a, parseScript(''), 0)).toBe(0);
+  });
+});
+
+describe('remapCursor with surrounding edits', () => {
+  const remap = (before: string, after: string, word: string) => {
+    const a = parseScript(before);
+    const b = parseScript(after);
+    const next = remapCursor(
+      a,
+      b,
+      a.findIndex((t) => t.text === word),
+    );
+    return b[next]?.text ?? '<end>';
+  };
+
+  it('finds the word by context when text is added on both sides', () => {
+    expect(remap('one two three four five', 'intro. one two three four five. outro', 'three')).toBe(
+      'three',
+    );
+  });
+
+  it('does not jump to an unrelated occurrence of a common word', () => {
+    expect(remap('a b the c d', 'x the y z w', 'the')).toBe('x');
   });
 });

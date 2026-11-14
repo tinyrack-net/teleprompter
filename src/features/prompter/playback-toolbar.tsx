@@ -1,6 +1,5 @@
 import { TRToolbar } from '@tinyrack/ui/components/toolbar';
 import {
-  ArrowLeftIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   MicIcon,
@@ -13,7 +12,6 @@ import { useI18n } from '../../i18n/i18n';
 interface PlaybackToolbarProps {
   listening: boolean;
   canListen: boolean;
-  onBack: () => void;
   onRestart: () => void;
   onPrev: () => void;
   onToggle: () => void;
@@ -27,10 +25,6 @@ export function PlaybackToolbar(props: PlaybackToolbarProps) {
   return (
     <div className="prompter-dock">
       <TRToolbar.Root aria-label={t.playback} className="prompter-toolbar">
-        <TRToolbar.Button aria-label={t.backToEditor} title={t.backToEditor} onClick={props.onBack}>
-          <ArrowLeftIcon aria-hidden="true" />
-        </TRToolbar.Button>
-        <TRToolbar.Separator orientation="vertical" />
         <TRToolbar.Button
           aria-label={t.restart}
           title={`${t.restart} (Home)`}
@@ -64,7 +58,11 @@ export function PlaybackToolbar(props: PlaybackToolbarProps) {
           <ChevronRightIcon aria-hidden="true" />
         </TRToolbar.Button>
         <TRToolbar.Separator orientation="vertical" />
-        <TRToolbar.Button aria-label={t.settings} title={t.settings} onClick={props.onSettings}>
+        <TRToolbar.Button
+          aria-label={t.settings}
+          title={`${t.settings} (S)`}
+          onClick={props.onSettings}
+        >
           <SettingsIcon aria-hidden="true" />
         </TRToolbar.Button>
       </TRToolbar.Root>

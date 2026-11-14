@@ -104,6 +104,82 @@ export function prevSpoken(tokens: Token[], index: number): number {
   return i < 0 ? nextSpoken(tokens, 0) : tokens[i]?.skip ? nextSpoken(tokens, 0) : i;
 }
 
+/**
+ * Maps a reading position from one version of a script to an edited one.
+ *
+ * Words before the cursor are aligned with the new script by their longest
+ * common prefix and suffix, so edits before, after or at the cursor keep the
+ * reader on the same word whenever it still exists.
+ */
+export function remapCursor(oldTokens: Token[], newTokens: Token[], cursor: number): number {
+  const oldWords: number[] = [];
+  const newWords: number[] = [];
+  oldTokens.forEach((t, i) => {
+    if (!t.skip) oldWords.push(i);
+  });
+  newTokens.forEach((t, i) => {
+    if (!t.skip) newWords.push(i);
+  });
+  if (newWords.length === 0) return newTokens.length;
+
+  // Index (among spoken words) of the word the reader is on.
+  let p = oldWords.findIndex((i) => i >= cursor);
+  if (p === -1) p = oldWords.length;
+
+  const same = (a: number, b: number) =>
+    oldTokens[oldWords[a]].clean === newTokens[newWords[b]].clean;
+
+  let prefix = 0;
+  while (prefix < oldWords.length && prefix < newWords.length && same(prefix, prefix)) prefix++;
+
+  let target: number;
+  if (p <= prefix) {
+    // The edit is after the cursor.
+    target = p;
+  } else {
+    let suffix = 0;
+    while (
+      suffix < oldWords.length - prefix &&
+      suffix < newWords.length - prefix &&
+      same(oldWords.length - 1 - suffix, newWords.length - 1 - suffix)
+    ) {
+      suffix++;
+    }
+    const fromEnd = oldWords.length - p;
+    if (fromEnd <= suffix) {
+      // The edit is before the cursor: keep the distance from the end.
+      target = newWords.length - fromEnd;
+    } else {
+      // The cursor is inside the edited range (or edits surround it): look for
+      // the same word with the most matching neighbors.
+      target = findAnchor(p, prefix, newWords.length - suffix) ?? prefix;
+    }
+  }
+
+  function findAnchor(at: number, from: number, to: number): number | null {
+    if (at >= oldWords.length) return null;
+    const RADIUS = 4;
+    let best: number | null = null;
+    let bestScore = 0;
+    for (let j = from; j < to; j++) {
+      if (!same(at, j)) continue;
+      let score = 1;
+      for (let d = 1; d <= RADIUS; d++) {
+        if (at - d >= 0 && j - d >= 0 && same(at - d, j - d)) score++;
+        if (at + d < oldWords.length && j + d < newWords.length && same(at + d, j + d)) score++;
+      }
+      if (score > bestScore) {
+        best = j;
+        bestScore = score;
+      }
+    }
+    // A lone common word is not enough evidence to move the reader there.
+    return bestScore >= 2 ? best : null;
+  }
+
+  return target >= newWords.length ? newTokens.length : newWords[target];
+}
+
 export function countSpoken(tokens: Token[], end = tokens.length): number {
   let n = 0;
   for (let i = 0; i < end && i < tokens.length; i++) if (!tokens[i].skip) n++;

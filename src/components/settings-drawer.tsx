@@ -7,8 +7,11 @@ import { TRSeparator } from '@tinyrack/ui/components/separator';
 import { TRSlider } from '@tinyrack/ui/components/slider';
 import { TRSwitch } from '@tinyrack/ui/components/switch';
 import { TRText } from '@tinyrack/ui/components/text';
+import { TRTextarea } from '@tinyrack/ui/components/textarea';
 import { XIcon } from 'lucide-react';
+import { type ReactNode, useRef } from 'react';
 import { useI18n } from '../i18n/i18n';
+import { SAMPLE_SCRIPT } from '../i18n/messages';
 import {
   detectBrowserLanguage,
   isLanguagePreference,
@@ -18,29 +21,34 @@ import {
   type LanguagePreference,
 } from '../lib/language';
 import { DEFAULT_SETTINGS, RANGES } from '../lib/settings';
-import { useSettings } from '../state/settings-store';
+import { useScript, useSettings } from '../state/settings-store';
 
 interface SettingsDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Language detected from the current script, shown next to "Auto-detect". */
   detectedSpeechLanguage: Language;
+  /** Move focus to the script field when the drawer opens. */
+  focusScript?: boolean;
 }
 
 export function SettingsDrawer({
   open,
   onOpenChange,
   detectedSpeechLanguage,
+  focusScript = false,
 }: SettingsDrawerProps) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const [settings, update] = useSettings();
+  const [script, setScript] = useScript(SAMPLE_SCRIPT[language]);
+  const scriptRef = useRef<HTMLTextAreaElement>(null);
 
   return (
     <TRDrawer.Root open={open} onOpenChange={onOpenChange} swipeDirection="right">
       <TRDrawer.Portal>
         <TRDrawer.Backdrop />
         <TRDrawer.Viewport>
-          <TRDrawer.Popup data-testid="settings">
+          <TRDrawer.Popup initialFocus={focusScript ? scriptRef : true}>
             <TRDrawer.Content className="flex flex-col gap-tinyrack-lg">
               <header className="flex items-start justify-between gap-tinyrack-md">
                 <div className="flex flex-col gap-tinyrack-2xs">
@@ -56,10 +64,36 @@ export function SettingsDrawer({
                 />
               </header>
 
-              <section className="flex flex-col gap-tinyrack-md">
-                <TRText as="h3" variant="label" color="muted">
-                  {t.sectionLanguage}
-                </TRText>
+              {/* The field label names this section, so it has no separate heading. */}
+              <Section>
+                <TRField.Root name="script" invalid={script.trim() === ''}>
+                  <TRField.Label>{t.scriptLabel}</TRField.Label>
+                  {/* Vertical scrolling inside the field must not swipe the drawer. */}
+                  <TRTextarea
+                    ref={scriptRef}
+                    className="settings-script"
+                    data-base-ui-swipe-ignore=""
+                    value={script}
+                    rows={8}
+                    placeholder={t.scriptPlaceholder}
+                    spellCheck={false}
+                    onChange={(event) => setScript(event.currentTarget.value)}
+                  />
+                  <TRField.Description>{t.scriptHint}</TRField.Description>
+                </TRField.Root>
+                <TRButton
+                  appearance="outline"
+                  uiSize="sm"
+                  className="self-start"
+                  onClick={() => setScript(SAMPLE_SCRIPT[language])}
+                >
+                  {t.useSampleScript}
+                </TRButton>
+              </Section>
+
+              <TRSeparator />
+
+              <Section title={t.sectionLanguage}>
                 <LanguageField
                   label={t.uiLanguage}
                   name="uiLanguage"
@@ -75,14 +109,11 @@ export function SettingsDrawer({
                   detected={detectedSpeechLanguage}
                   onChange={(speechLanguage) => update({ speechLanguage })}
                 />
-              </section>
+              </Section>
 
               <TRSeparator />
 
-              <section className="flex flex-col gap-tinyrack-md">
-                <TRText as="h3" variant="label" color="muted">
-                  {t.sectionDisplay}
-                </TRText>
+              <Section title={t.sectionDisplay}>
                 <RangeField
                   label={t.fontSize}
                   name="fontSize"
@@ -120,7 +151,7 @@ export function SettingsDrawer({
                   </TRField.Item>
                   <TRField.Description>{t.mirrorHint}</TRField.Description>
                 </TRField.Root>
-              </section>
+              </Section>
 
               <TRSeparator />
 
@@ -142,6 +173,19 @@ export function SettingsDrawer({
         </TRDrawer.Viewport>
       </TRDrawer.Portal>
     </TRDrawer.Root>
+  );
+}
+
+function Section({ title, children }: { title?: string; children: ReactNode }) {
+  return (
+    <section className="flex flex-col gap-tinyrack-md">
+      {title ? (
+        <TRText as="h3" variant="label" color="muted">
+          {title}
+        </TRText>
+      ) : null}
+      {children}
+    </section>
   );
 }
 

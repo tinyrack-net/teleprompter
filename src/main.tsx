@@ -4,7 +4,6 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createBrowserRouter, Navigate, Outlet } from 'react-router';
 import { RouterProvider } from 'react-router/dom';
-import { EditorPage } from './features/editor/editor-page';
 import { PrompterPage } from './features/prompter/prompter-page';
 import { I18nProvider } from './i18n/i18n';
 
@@ -23,8 +22,8 @@ const router = createBrowserRouter([
   {
     element: <Layout />,
     children: [
-      { index: true, element: <EditorPage /> },
-      { path: 'prompter', element: <PrompterPage /> },
+      { index: true, element: <PrompterPage /> },
+      // Unknown paths, including the former /prompter route, open the prompter.
       { path: '*', element: <Navigate to="/" replace /> },
     ],
   },

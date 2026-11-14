@@ -1,6 +1,6 @@
 # Teleprompter
 
-A voice-following teleprompter for the web. Paste a script, press **Start**, and read aloud. The text scrolls to follow your voice.
+A voice-following teleprompter for the web. The app opens straight into the prompter: press the microphone button and read aloud, and the text scrolls to follow your voice. Write your own script in the settings.
 
 Live at [prompter.tinyrack.net](https://prompter.tinyrack.net).
 
@@ -10,21 +10,23 @@ Live at [prompter.tinyrack.net](https://prompter.tinyrack.net).
 - Phrase-based matching that tolerates partial words and Korean particles, with `Intl.Segmenter` word splitting for Japanese
 - `[Bracketed]` text is displayed but skipped while reading
 - Click any word to jump to it
-- Floating, semi-transparent playback controls and a floating settings button inside the prompter
+- Floating, semi-transparent playback controls and a floating settings button
+- Opens paused, so the microphone is only requested when you press the mic button
+- Editing the script keeps your reading position
 - Settings (saved in `localStorage`):
+  - Script
   - Interface language: auto-detect (browser language), English, Korean, Japanese
   - Speech language: auto-detect (from the script), English, Korean, Japanese
   - Font size, left/right margin, top/bottom margin, mirror mode
 
 ## Keyboard shortcuts
 
-| Key              | Action                             |
-| ---------------- | ---------------------------------- |
-| `Space`          | Start / stop listening             |
-| `←` / `→`        | Move one word back / forward       |
-| `Home`           | Restart from the beginning         |
-| `Esc`            | Back to the editor                 |
-| `Ctrl/⌘ + Enter` | Start the prompter from the editor |
+| Key        | Action                       |
+| ---------- | ---------------------------- |
+| `Space`    | Start / stop listening       |
+| `←` / `→`  | Move one word back / forward |
+| `Home`     | Restart from the beginning   |
+| `S` or `,` | Open settings                |
 
 ## Browser support
 
@@ -39,8 +41,8 @@ src/
   lib/          framework-free logic: script parsing, matching, speech, settings, language
   state/        localStorage-backed stores (useSyncExternalStore)
   i18n/         typed messages for en / ko / ja
-  components/   shared UI (settings drawer)
-  features/     editor and prompter pages
+  components/   shared UI (settings drawer, including the script editor)
+  features/     the prompter page
 ```
 
 ## Development
