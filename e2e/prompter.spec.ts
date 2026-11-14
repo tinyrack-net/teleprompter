@@ -373,10 +373,9 @@ test('margins apply to the prompter immediately', async ({ page }) => {
   await expect(settings.getByText('40%')).toBeVisible();
   await expect(page.locator('.prompter')).toHaveAttribute('style', /--prompter-margin-x: 40vw/);
 
-  const marginY = settings.getByRole('slider', { name: 'Top and bottom margin' });
-  await marginY.focus();
-  await page.keyboard.press('ArrowRight');
-  await expect(page.locator('.prompter')).toHaveAttribute('style', /--prompter-margin-y: 1vh/);
+  // There is no top/bottom margin setting.
+  await expect(settings.getByRole('slider', { name: 'Top and bottom margin' })).toHaveCount(0);
+  await expect(settings.getByRole('slider')).toHaveCount(2);
 });
 
 test('line wrapping can be switched and is saved', async ({ page }) => {
@@ -430,22 +429,22 @@ test('words mode never splits a Korean word across lines', async ({ page }) => {
 test('settings persist in localStorage', async ({ page }) => {
   const settings = await openSettings(page);
   await settings.getByRole('switch').click();
-  const marginY = settings.getByRole('slider', { name: 'Top and bottom margin' });
-  await marginY.focus();
+  const marginX = settings.getByRole('slider', { name: 'Left and right margin' });
+  await marginX.focus();
   await page.keyboard.press('ArrowRight');
   await page.keyboard.press('ArrowRight');
 
   const stored = await page.evaluate(() =>
     JSON.parse(localStorage.getItem('teleprompter:settings:v2') ?? '{}'),
   );
-  expect(stored).toMatchObject({ mirror: true, marginY: 2, uiLanguage: 'auto' });
+  expect(stored).toMatchObject({ mirror: true, marginX: 10, uiLanguage: 'auto' });
 
   await page.reload();
   await expect(page.locator('.prompter')).toHaveAttribute('data-mirror', '');
   await openSettings(page);
   await expect(drawer(page).getByRole('switch')).toBeChecked();
-  await expect(drawer(page).getByRole('slider', { name: 'Top and bottom margin' })).toHaveValue(
-    '2',
+  await expect(drawer(page).getByRole('slider', { name: 'Left and right margin' })).toHaveValue(
+    '10',
   );
 });
 

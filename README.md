@@ -18,7 +18,7 @@ Live at [prompter.tinyrack.net](https://prompter.tinyrack.net).
   - Script
   - Interface language: auto-detect (browser language), English, Korean, Japanese
   - Speech language: auto-detect (from the script), English, Korean, Japanese
-  - Font size, left/right margin, top/bottom margin, mirror mode
+  - Font size, left/right margin, mirror mode
   - Line wrapping: keep words whole (default) or wrap at any character
 
 ## Keyboard shortcuts

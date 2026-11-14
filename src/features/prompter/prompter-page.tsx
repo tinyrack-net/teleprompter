@@ -75,7 +75,6 @@ export function PrompterPage() {
   const style = {
     '--prompter-font-size': `${settings.fontSize}px`,
     '--prompter-margin-x': `${settings.marginX}vw`,
-    '--prompter-margin-y': `${settings.marginY}vh`,
   } as CSSProperties;
 
   return (

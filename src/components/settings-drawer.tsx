@@ -154,14 +154,6 @@ export function SettingsDrawer({
                   range={RANGES.marginX}
                   onChange={(marginX) => update({ marginX })}
                 />
-                <RangeField
-                  label={t.marginY}
-                  name="marginY"
-                  unit="%"
-                  value={settings.marginY}
-                  range={RANGES.marginY}
-                  onChange={(marginY) => update({ marginY })}
-                />
                 <TRField.Root>
                   <TRFieldset.Root>
                     <TRFieldset.Legend>{t.lineWrap}</TRFieldset.Legend>
@@ -211,7 +203,6 @@ export function SettingsDrawer({
                   update({
                     fontSize: DEFAULT_SETTINGS.fontSize,
                     marginX: DEFAULT_SETTINGS.marginX,
-                    marginY: DEFAULT_SETTINGS.marginY,
                     mirror: DEFAULT_SETTINGS.mirror,
                     lineWrap: DEFAULT_SETTINGS.lineWrap,
                   })

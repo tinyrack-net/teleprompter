@@ -68,7 +68,6 @@ body {
 .prompter {
   --prompter-font-size: var(--tinyrack-text-5xl);
   --prompter-margin-x: 0;
-  --prompter-margin-y: 0;
   --prompter-reading-line: 35%;
   --prompter-reading-offset: 35cqh;
   --prompter-tail-space: 65cqh;
@@ -90,7 +89,7 @@ body {
 
 .prompter-scroller {
   position: absolute;
-  inset: var(--prompter-margin-y) 0;
+  inset: 0;
   overflow-y: auto;
   /* Lets the text padding use cqh, i.e. a share of the scroller's height. */
   container-type: size;
