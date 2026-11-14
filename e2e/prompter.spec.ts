@@ -194,6 +194,46 @@ test('shortcuts still work after using the toolbar or settings', async ({ page }
   await expect(current(page)).toHaveText('everyone');
 });
 
+test('fullscreen toggles from the toolbar and the F key', async ({ page }) => {
+  const bar = toolbar(page);
+  const isFullscreen = () => page.evaluate(() => document.fullscreenElement !== null);
+
+  await bar.getByRole('button', { name: 'Enter fullscreen' }).click();
+  await expect.poll(isFullscreen).toBe(true);
+  const exit = bar.getByRole('button', { name: 'Exit fullscreen' });
+  await expect(exit).toHaveAttribute('aria-pressed', 'true');
+
+  // Settings stay usable in fullscreen.
+  await bar.getByRole('button', { name: 'Settings' }).click();
+  await expect(drawer(page)).toBeVisible();
+  await drawer(page).getByRole('button', { name: 'Close' }).click();
+  await expect(drawer(page)).toBeHidden();
+
+  await page.keyboard.press('f');
+  await expect.poll(isFullscreen).toBe(false);
+  await page.keyboard.press('f');
+  await expect.poll(isFullscreen).toBe(true);
+
+  // Leaving fullscreen through the browser (e.g. Esc) updates the button.
+  await page.evaluate(() => document.exitFullscreen());
+  await expect(bar.getByRole('button', { name: 'Enter fullscreen' })).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  );
+});
+
+test('the fullscreen button is hidden when the browser cannot go fullscreen', async ({ page }) => {
+  // iPhone Safari has no element fullscreen.
+  await page.addInitScript(() => {
+    for (const name of ['fullscreenEnabled', 'webkitFullscreenEnabled']) {
+      Object.defineProperty(Document.prototype, name, { get: () => false, configurable: true });
+    }
+  });
+  await page.reload();
+  await expect(toolbar(page).getByRole('button', { name: 'Settings' })).toBeVisible();
+  await expect(toolbar(page).getByRole('button', { name: /fullscreen/i })).toHaveCount(0);
+});
+
 test('settings are only in the floating toolbar', async ({ page }) => {
   // The toolbar is the single entry point; no separate corner button.
   await expect(page.getByRole('button', { name: 'Settings' })).toHaveCount(1);

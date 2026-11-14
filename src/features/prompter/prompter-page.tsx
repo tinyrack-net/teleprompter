@@ -9,6 +9,7 @@ import { useI18n } from '../../i18n/i18n';
 import { SAMPLE_SCRIPT } from '../../i18n/messages';
 import { detectScriptLanguage, resolveLanguage, SPEECH_LOCALE } from '../../lib/language';
 import { countSpoken, parseScript } from '../../lib/script';
+import { useFullscreen } from '../../lib/use-fullscreen';
 import { useScript, useSettings } from '../../state/settings-store';
 import { PlaybackToolbar } from './playback-toolbar';
 import { ScriptView } from './script-view';
@@ -34,6 +35,7 @@ export function PrompterPage() {
   const empty = total === 0;
 
   const voice = useVoiceCursor(tokens, locale);
+  const fullscreen = useFullscreen();
   const { stop, toggle, next, prev, restart } = voice;
 
   // An emptied script has nothing to follow.
@@ -53,6 +55,9 @@ export function PrompterPage() {
         prev,
         restart,
         settings: () => setSettingsOpen(true),
+        fullscreen: () => {
+          if (fullscreen.supported) void fullscreen.toggle();
+        },
       });
       if (!action) return;
       e.preventDefault();
@@ -64,7 +69,7 @@ export function PrompterPage() {
     // Capture phase: run before focused widgets (the toolbar) handle the key.
     window.addEventListener('keydown', onKey, { capture: true });
     return () => window.removeEventListener('keydown', onKey, { capture: true });
-  }, [settingsOpen, empty, toggle, next, prev, restart]);
+  }, [settingsOpen, empty, toggle, next, prev, restart, fullscreen]);
 
   const done = countSpoken(tokens, voice.cursor);
   const style = {
@@ -173,6 +178,11 @@ export function PrompterPage() {
         onToggle={toggle}
         onNext={next}
         onSettings={() => setSettingsOpen(true)}
+        fullscreen={
+          fullscreen.supported
+            ? { active: fullscreen.active, onToggle: () => void fullscreen.toggle() }
+            : undefined
+        }
       />
 
       <SettingsDrawer
@@ -186,7 +196,10 @@ export function PrompterPage() {
   );
 }
 
-type PrompterActions = Record<'toggle' | 'next' | 'prev' | 'restart' | 'settings', () => void>;
+type PrompterActions = Record<
+  'toggle' | 'next' | 'prev' | 'restart' | 'settings' | 'fullscreen',
+  () => void
+>;
 
 function keyAction(key: string, actions: PrompterActions): (() => void) | null {
   switch (key) {
@@ -204,6 +217,9 @@ function keyAction(key: string, actions: PrompterActions): (() => void) | null {
     case 's':
     case 'S':
       return actions.settings;
+    case 'f':
+    case 'F':
+      return actions.fullscreen;
     default:
       return null;
   }

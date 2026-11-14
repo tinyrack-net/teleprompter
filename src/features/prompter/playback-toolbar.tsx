@@ -2,8 +2,10 @@ import { TRToolbar } from '@tinyrack/ui/components/toolbar';
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
+  MaximizeIcon,
   MicIcon,
   MicOffIcon,
+  MinimizeIcon,
   RotateCcwIcon,
   SettingsIcon,
 } from 'lucide-react';
@@ -17,6 +19,8 @@ interface PlaybackToolbarProps {
   onToggle: () => void;
   onNext: () => void;
   onSettings: () => void;
+  /** Omitted when the browser cannot go fullscreen (e.g. iPhone Safari). */
+  fullscreen?: { active: boolean; onToggle: () => void };
 }
 
 /** Floating, semi-transparent playback controls at the bottom of the prompter. */
@@ -58,6 +62,20 @@ export function PlaybackToolbar(props: PlaybackToolbarProps) {
           <ChevronRightIcon aria-hidden="true" />
         </TRToolbar.Button>
         <TRToolbar.Separator orientation="vertical" />
+        {props.fullscreen ? (
+          <TRToolbar.Button
+            aria-label={props.fullscreen.active ? t.exitFullscreen : t.enterFullscreen}
+            aria-pressed={props.fullscreen.active}
+            title={`${props.fullscreen.active ? t.exitFullscreen : t.enterFullscreen} (F)`}
+            onClick={props.fullscreen.onToggle}
+          >
+            {props.fullscreen.active ? (
+              <MinimizeIcon aria-hidden="true" />
+            ) : (
+              <MaximizeIcon aria-hidden="true" />
+            )}
+          </TRToolbar.Button>
+        ) : null}
         <TRToolbar.Button
           aria-label={t.settings}
           title={`${t.settings} (S)`}

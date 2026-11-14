@@ -10,7 +10,7 @@ Live at [prompter.tinyrack.net](https://prompter.tinyrack.net).
 - Phrase-based matching that tolerates partial words and Korean particles, with `Intl.Segmenter` word splitting for Japanese
 - `[Bracketed]` text is displayed but skipped while reading
 - Click any word to jump to it
-- Floating, semi-transparent playback controls, including the settings button
+- Floating, semi-transparent playback controls, including fullscreen and settings buttons (the fullscreen button is hidden where the browser cannot go fullscreen, such as iPhone Safari)
 - Opens paused, so the microphone is only requested when you press the mic button
 - Editing the script keeps your reading position
 - Settings (saved in `localStorage`):
@@ -28,6 +28,7 @@ Live at [prompter.tinyrack.net](https://prompter.tinyrack.net).
 | `←` / `→`  | Move one word back / forward |
 | `Home`     | Restart from the beginning   |
 | `S` or `,` | Open settings                |
+| `F`        | Toggle fullscreen            |
 
 ## Browser support
 
