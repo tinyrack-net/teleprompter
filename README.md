@@ -1,28 +1,47 @@
 # Teleprompter
 
-A minimal voice-following teleprompter for the web. Paste a script, press **Start**, and read aloud — the text scrolls to follow your voice.
+A voice-following teleprompter for the web. Paste a script, press **Start**, and read aloud. The text scrolls to follow your voice.
+
+Live at [prompter.tinyrack.net](https://prompter.tinyrack.net).
 
 ## Features
 
 - Voice-following scroll using the browser's Web Speech API
-- Phrase-based matching that tolerates partial words and Korean particles
+- Phrase-based matching that tolerates partial words and Korean particles, with `Intl.Segmenter` word splitting for Japanese
 - `[Bracketed]` text is displayed but skipped while reading
 - Click any word to jump to it
-- Font size and mirror mode
-- Script and settings saved in local storage
+- Floating, semi-transparent playback controls and a floating settings button inside the prompter
+- Settings (saved in `localStorage`):
+  - Interface language: auto-detect (browser language), English, Korean, Japanese
+  - Speech language: auto-detect (from the script), English, Korean, Japanese
+  - Font size, left/right margin, top/bottom margin, mirror mode
 
 ## Keyboard shortcuts
 
-| Key       | Action                       |
-| --------- | ---------------------------- |
-| `Space`   | Start / stop listening       |
-| `←` / `→` | Move one word back / forward |
-| `Home`    | Restart from the beginning   |
-| `Esc`     | Back to the editor           |
+| Key              | Action                             |
+| ---------------- | ---------------------------------- |
+| `Space`          | Start / stop listening             |
+| `←` / `→`        | Move one word back / forward       |
+| `Home`           | Restart from the beginning         |
+| `Esc`            | Back to the editor                 |
+| `Ctrl/⌘ + Enter` | Start the prompter from the editor |
 
 ## Browser support
 
-Speech recognition requires Chrome, Edge, or Safari. Firefox does not support the Web Speech API.
+Speech recognition requires Chrome, Edge, or Safari. Firefox does not support the Web Speech API; the prompter still works with the keyboard and on-screen controls.
+
+## Stack
+
+React 19, TypeScript, React Router, [@tinyrack/ui](https://www.npmjs.com/package/@tinyrack/ui) with Tailwind CSS 4, built with Vite.
+
+```text
+src/
+  lib/          framework-free logic: script parsing, matching, speech, settings, language
+  state/        localStorage-backed stores (useSyncExternalStore)
+  i18n/         typed messages for en / ko / ja
+  components/   shared UI (settings drawer)
+  features/     editor and prompter pages
+```
 
 ## Development
 
@@ -31,7 +50,7 @@ Requires Node.js 24 (see `.node-version`) and pnpm.
 ```sh
 pnpm install
 pnpm dev        # start the dev server
-pnpm validate   # lint, typecheck, unit tests and build
+pnpm validate   # lint, Tinyrack UI check, typecheck, unit tests and build
 pnpm test:e2e   # Playwright E2E tests against the built dist/
 ```
 
@@ -39,11 +58,11 @@ E2E tests replace the Web Speech API with a fake recognizer, so they run headles
 
 ## Deployment
 
-The app is served from [prompter.tinyrack.net](https://prompter.tinyrack.net) as static assets on Cloudflare Workers (`wrangler.jsonc`).
+The app is served from [prompter.tinyrack.net](https://prompter.tinyrack.net) as static assets on Cloudflare Workers (`wrangler.jsonc`), with SPA fallback for client-side routes.
 
 The `CI/CD` workflow runs on every pull request and push to `main`:
 
-1. **validate**: Biome lint, typecheck, unit tests, build, `wrangler deploy --dry-run` and actionlint
+1. **validate**: Biome, `tinyrack-ui-check`, typecheck, unit tests, build, `wrangler deploy --dry-run` and actionlint
 2. **e2e**: Playwright tests against the built bundle
 3. **deploy** (`main` only): deploys the exact tested bundle with Wrangler, using the `production` environment
 4. **smoke**: waits until production serves the new build, checks headers, then reruns the E2E suite against production

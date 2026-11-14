@@ -12,11 +12,13 @@ type Recognition = {
   onend: (() => void) | null;
 };
 
+export type SpeechErrorCode = 'unsupported' | 'denied' | 'failed';
+
 export interface SpeechCallbacks {
   /** Full transcript of the current recognition session (final + interim). */
   onTranscript(transcript: string): void;
   onListeningChange(listening: boolean): void;
-  onError(message: string): void;
+  onError(code: SpeechErrorCode, detail?: string): void;
 }
 
 export function isSpeechSupported(): boolean {
@@ -27,7 +29,11 @@ export class Speech {
   private recognition: Recognition | null = null;
   private wanted = false;
 
-  constructor(private readonly cb: SpeechCallbacks) {}
+  private readonly cb: SpeechCallbacks;
+
+  constructor(cb: SpeechCallbacks) {
+    this.cb = cb;
+  }
 
   get listening(): boolean {
     return this.wanted;
@@ -36,9 +42,7 @@ export class Speech {
   start(lang: string): void {
     const Ctor = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!Ctor) {
-      this.cb.onError(
-        'This browser does not support speech recognition. Try Chrome, Edge or Safari.',
-      );
+      this.cb.onError('unsupported');
       return;
     }
     this.stop();
@@ -60,9 +64,9 @@ export class Speech {
       if (e.error === 'no-speech' || e.error === 'aborted') return;
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
         this.wanted = false;
-        this.cb.onError('Microphone access was denied.');
+        this.cb.onError('denied');
       } else {
-        this.cb.onError(`Speech recognition error: ${e.error}`);
+        this.cb.onError('failed', String(e.error));
       }
     };
 
@@ -86,7 +90,7 @@ export class Speech {
       this.cb.onListeningChange(true);
     } catch (err) {
       this.wanted = false;
-      this.cb.onError(`Could not start speech recognition: ${String(err)}`);
+      this.cb.onError('failed', String(err));
       this.cb.onListeningChange(false);
     }
   }

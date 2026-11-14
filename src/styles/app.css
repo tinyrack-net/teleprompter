@@ -1,0 +1,290 @@
+/*
+ * IBM Plex Sans is the Tinyrack typeface; @tinyrack/ui ships no @font-face.
+ * KR/JP use the numbered entrypoints, which are split into unicode-range
+ * chunks so only the glyphs on screen are downloaded.
+ */
+@import "@fontsource-variable/ibm-plex-sans/wght.css";
+@import "@fontsource/ibm-plex-sans-kr/400.css";
+@import "@fontsource/ibm-plex-sans-kr/600.css";
+@import "@fontsource/ibm-plex-sans-jp/400.css";
+@import "@fontsource/ibm-plex-sans-jp/600.css";
+@import "tailwindcss";
+@import "@tinyrack/ui/core.css";
+@import "@tinyrack/ui/components/alert.css";
+@import "@tinyrack/ui/components/button.css";
+@import "@tinyrack/ui/components/drawer.css";
+@import "@tinyrack/ui/components/field.css";
+@import "@tinyrack/ui/components/icon-button.css";
+@import "@tinyrack/ui/components/native-select.css";
+@import "@tinyrack/ui/components/progress.css";
+@import "@tinyrack/ui/components/separator.css";
+@import "@tinyrack/ui/components/slider.css";
+@import "@tinyrack/ui/components/switch.css";
+@import "@tinyrack/ui/components/text.css";
+@import "@tinyrack/ui/components/textarea.css";
+@import "@tinyrack/ui/components/toolbar.css";
+
+:root {
+  /* Translucent surface for controls that float over the script. */
+  --floating-surface: color-mix(in srgb, var(--tinyrack-surface-muted) 55%, transparent);
+  --floating-surface-hover: color-mix(in srgb, var(--tinyrack-surface-muted) 85%, transparent);
+  --floating-blur: blur(var(--tinyrack-space-md));
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--tinyrack-font-body);
+}
+
+/* ---------- Editor ---------- */
+
+.editor {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--tinyrack-space-xl);
+  max-width: var(--tinyrack-mdx-content-width);
+  min-height: 100%;
+  margin-inline: auto;
+  padding: var(--tinyrack-space-2xl) var(--tinyrack-space-lg);
+}
+
+.editor-field {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.editor-textarea {
+  flex: 1;
+  min-height: calc(var(--tinyrack-measure-xl) + var(--tinyrack-measure-xs));
+  resize: vertical;
+  line-height: var(--tinyrack-leading-lg);
+}
+
+/* ---------- Prompter ---------- */
+
+.prompter {
+  --prompter-font-size: var(--tinyrack-text-5xl);
+  --prompter-margin-x: 0;
+  --prompter-margin-y: 0;
+  --prompter-reading-line: 35%;
+  --prompter-reading-offset: 35cqh;
+  --prompter-tail-space: 65cqh;
+  --prompter-paragraph-gap: calc(var(--prompter-font-size) * var(--tinyrack-leading-lg) / 2);
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--tinyrack-scrim-base);
+  color: var(--tinyrack-text);
+}
+
+.prompter-progress {
+  --tr-progress-track-height: var(--tinyrack-space-2xs);
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: var(--tinyrack-layer-chrome);
+}
+
+.prompter-scroller {
+  position: absolute;
+  inset: var(--prompter-margin-y) 0;
+  overflow-y: auto;
+  /* Lets the text padding use cqh, i.e. a share of the scroller's height. */
+  container-type: size;
+  scrollbar-width: none;
+}
+
+.prompter-reading-line {
+  position: sticky;
+  top: var(--prompter-reading-line);
+  height: 0;
+  border-top: var(--tinyrack-border-width-default) dashed var(--tinyrack-primary-foreground);
+  opacity: var(--tinyrack-opacity-disabled);
+  pointer-events: none;
+}
+
+.prompter-text {
+  box-sizing: border-box;
+  /* % padding resolves against width, so the reading line offset uses cqh. */
+  padding-block: var(--prompter-reading-offset) var(--prompter-tail-space);
+  padding-inline: max(var(--prompter-margin-x), var(--tinyrack-space-lg));
+  font-size: var(--prompter-font-size);
+  font-weight: var(--tinyrack-weight-medium);
+  line-height: var(--tinyrack-leading-lg);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.prompter-text[data-lang="ja"] {
+  word-break: normal;
+  line-break: strict;
+}
+
+.prompter[data-mirror] .prompter-text {
+  transform: scaleX(-1);
+}
+
+.prompter-text > span {
+  color: var(--tinyrack-text);
+  transition: color var(--tinyrack-duration-fast) var(--tinyrack-ease-standard);
+}
+
+.prompter-text > span[data-past] {
+  color: var(--tinyrack-border-strong);
+}
+
+.prompter-word {
+  cursor: pointer;
+  border-radius: var(--tinyrack-radius-sm);
+}
+
+.prompter-word:hover {
+  background: var(--tinyrack-surface-hover);
+}
+
+.prompter-word[data-current] {
+  background: var(--tinyrack-primary);
+  color: var(--tinyrack-on-primary);
+  box-shadow: 0 0 0 var(--tinyrack-space-xs) var(--tinyrack-primary);
+}
+
+.prompter-text > .prompter-note {
+  color: var(--tinyrack-info-foreground);
+  font-style: italic;
+  font-weight: var(--tinyrack-weight-regular);
+}
+
+.prompter-line {
+  display: block;
+}
+
+.prompter-paragraph {
+  display: block;
+  /* Paragraph gap scales with the text size. */
+  height: var(--prompter-paragraph-gap);
+}
+
+/* ---------- Floating controls ---------- */
+
+.prompter-fab.prompter-fab {
+  position: absolute;
+  top: var(--tinyrack-space-lg);
+  right: var(--tinyrack-space-lg);
+  z-index: var(--tinyrack-layer-chrome);
+  background: var(--floating-surface);
+  backdrop-filter: var(--floating-blur);
+  border-color: var(--tinyrack-border);
+  border-radius: var(--tinyrack-radius-full);
+  opacity: var(--tinyrack-opacity-hover);
+}
+
+.prompter-fab.prompter-fab:hover,
+.prompter-fab.prompter-fab:focus-visible {
+  background: var(--floating-surface-hover);
+  opacity: 1;
+}
+
+.prompter-dock {
+  position: absolute;
+  inset-inline: 0;
+  bottom: max(var(--tinyrack-space-xl), env(safe-area-inset-bottom));
+  z-index: var(--tinyrack-layer-chrome);
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.prompter-dock > * {
+  pointer-events: auto;
+}
+
+.prompter-toolbar.prompter-toolbar {
+  --tr-toolbar-background: var(--floating-surface);
+  --tr-toolbar-border: var(--tinyrack-border);
+  backdrop-filter: var(--floating-blur);
+  border-radius: var(--tinyrack-radius-full);
+  box-shadow: var(--tinyrack-shadow-raised);
+  padding: var(--tinyrack-space-xs) var(--tinyrack-space-sm);
+  opacity: var(--tinyrack-opacity-hover);
+  transition: opacity var(--tinyrack-duration-normal) var(--tinyrack-ease-standard);
+}
+
+.prompter-toolbar.prompter-toolbar:hover,
+.prompter-toolbar.prompter-toolbar:focus-within {
+  --tr-toolbar-background: var(--floating-surface-hover);
+  opacity: 1;
+}
+
+.prompter-toolbar .tr-toolbar-button {
+  border-radius: var(--tinyrack-radius-full);
+}
+
+.prompter-toolbar .tr-toolbar-button:hover {
+  background: var(--tinyrack-surface-hover);
+}
+
+.prompter-toolbar .prompter-mic {
+  background: var(--tinyrack-surface-hover);
+}
+
+.prompter-toolbar .prompter-mic[data-listening] {
+  background: var(--tinyrack-danger);
+  color: var(--tinyrack-on-danger);
+}
+
+.prompter-toolbar .tr-toolbar-button[data-disabled] {
+  opacity: var(--tinyrack-opacity-disabled);
+}
+
+.prompter-status {
+  position: absolute;
+  top: var(--tinyrack-space-lg);
+  left: var(--tinyrack-space-lg);
+  z-index: var(--tinyrack-layer-chrome);
+  display: flex;
+  align-items: center;
+  gap: var(--tinyrack-space-sm);
+  max-width: var(--tinyrack-overlay-width-sm);
+  padding: var(--tinyrack-space-xs) var(--tinyrack-space-md);
+  background: var(--floating-surface);
+  backdrop-filter: var(--floating-blur);
+  border-radius: var(--tinyrack-radius-full);
+  pointer-events: none;
+}
+
+.prompter-status-state {
+  flex: none;
+}
+
+.prompter-heard {
+  min-width: 0;
+  max-width: var(--tinyrack-measure-xl);
+}
+
+.prompter-alert {
+  position: absolute;
+  inset-inline: var(--tinyrack-space-lg);
+  top: calc(var(--tinyrack-space-3xl) + var(--tinyrack-space-sm));
+  z-index: var(--tinyrack-layer-chrome);
+  display: flex;
+  justify-content: center;
+}
+
+.prompter-alert > * {
+  max-width: var(--tinyrack-overlay-width-md);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prompter-text > span,
+  .prompter-toolbar.prompter-toolbar {
+    transition: none;
+  }
+}

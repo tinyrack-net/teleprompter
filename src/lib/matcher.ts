@@ -1,4 +1,4 @@
-import { nextSpoken, normalize, type Token } from './script';
+import { nextSpoken, segmentWords, type Token } from './script';
 
 export interface MatchOptions {
   /** How many spoken script words ahead of the cursor may be matched. */
@@ -26,9 +26,9 @@ export function similar(a: string, b: string): boolean {
   return short.length >= 2 && long.startsWith(short) && short.length / long.length >= 0.5;
 }
 
-/** Splits a recognizer transcript into normalized words. */
-export function toSpokenWords(transcript: string): string[] {
-  return transcript.split(/\s+/).map(normalize).filter(Boolean);
+/** Splits a recognizer transcript into normalized words, using the same segmentation as the script. */
+export function toSpokenWords(transcript: string, locale = 'en'): string[] {
+  return segmentWords(transcript, locale);
 }
 
 /**

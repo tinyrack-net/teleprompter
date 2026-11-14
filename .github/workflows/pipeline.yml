@@ -31,6 +31,9 @@ jobs:
       - name: Lint and format check
         run: pnpm lint
 
+      - name: Tinyrack UI check
+        run: pnpm check:ui
+
       - name: Typecheck
         run: pnpm typecheck
 
@@ -163,8 +166,8 @@ jobs:
           asset_headers="$(curl -fsSI "${PRODUCTION_URL}${asset}")"
           grep -qi '^cache-control: .*immutable' <<< "$asset_headers"
 
-          # Unknown paths fall back to the app (single-page application mode).
-          curl -fsS "${PRODUCTION_URL}/does-not-exist" | grep -q 'id="script-input"'
+          # Client-side routes are served by the SPA fallback.
+          curl -fsS "${PRODUCTION_URL}/prompter" | grep -qF "${asset}"
 
       - name: Install Chromium
         run: pnpm exec playwright install --with-deps chromium
