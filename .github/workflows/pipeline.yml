@@ -1,0 +1,185 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # Superseded pull request runs are cancelled; runs on main always finish so
+  # a deployment is never interrupted halfway.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  PRODUCTION_URL: https://prompter.tinyrack.net
+
+jobs:
+  validate:
+    name: Lint, typecheck, unit test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: ./.github/actions/setup
+
+      - name: Lint and format check
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+      - name: Verify Cloudflare deployment bundle
+        run: pnpm deploy:dry-run
+
+      - name: Validate workflows
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12 -color
+
+      # The exact bundle that passes E2E is the one that gets deployed.
+      - name: Upload build
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: dist
+          path: dist
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+  e2e:
+    name: E2E (Chromium)
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: ./.github/actions/setup
+
+      - name: Download build
+        uses: actions/download-artifact@v8.0.2
+        with:
+          name: dist
+          path: dist
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run E2E tests against the build
+        run: pnpm test:e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: playwright-report
+          path: |
+            playwright-report
+            test-results
+          retention-days: 7
+
+  deploy:
+    name: Deploy to Cloudflare
+    needs:
+      - validate
+      - e2e
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: production
+      url: ${{ env.PRODUCTION_URL }}
+    concurrency:
+      group: production-deploy
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: ./.github/actions/setup
+
+      - name: Download build
+        uses: actions/download-artifact@v8.0.2
+        with:
+          name: dist
+          path: dist
+
+      - name: Deploy to Cloudflare Workers
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: >-
+          pnpm exec wrangler deploy
+          --message "${GITHUB_SHA::7} ${GITHUB_EVENT_NAME} run ${GITHUB_RUN_ID}"
+
+  smoke:
+    name: Production smoke test
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: ./.github/actions/setup
+
+      - name: Download build
+        uses: actions/download-artifact@v8.0.2
+        with:
+          name: dist
+          path: dist
+
+      # Edge caches and a first-time custom domain certificate can lag behind
+      # the deploy, so wait until the site serves exactly this build.
+      - name: Wait for this build to be live
+        run: |
+          asset="$(grep -oE '/assets/index-[A-Za-z0-9_-]+\.js' dist/index.html | head -n1)"
+          echo "Expecting ${asset}"
+          for attempt in $(seq 1 30); do
+            if curl -fsS --max-time 10 "${PRODUCTION_URL}/?ci=${GITHUB_RUN_ID}-${attempt}" \
+              | grep -qF "${asset}"; then
+              echo "Live after ${attempt} attempt(s)"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::${PRODUCTION_URL} did not serve ${asset} within 5 minutes"
+          exit 1
+
+      - name: Check response headers and assets
+        run: |
+          headers="$(curl -fsSI "${PRODUCTION_URL}/")"
+          echo "$headers"
+          grep -qi '^content-type: text/html' <<< "$headers"
+          grep -qi '^x-content-type-options: nosniff' <<< "$headers"
+          grep -qi '^permissions-policy: .*microphone=(self)' <<< "$headers"
+
+          asset="$(grep -oE '/assets/index-[A-Za-z0-9_-]+\.js' dist/index.html | head -n1)"
+          asset_headers="$(curl -fsSI "${PRODUCTION_URL}${asset}")"
+          grep -qi '^cache-control: .*immutable' <<< "$asset_headers"
+
+          # Unknown paths fall back to the app (single-page application mode).
+          curl -fsS "${PRODUCTION_URL}/does-not-exist" | grep -q 'id="script-input"'
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run E2E tests against production
+        env:
+          BASE_URL: ${{ env.PRODUCTION_URL }}
+        run: pnpm test:e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: playwright-report-production
+          path: |
+            playwright-report
+            test-results
+          retention-days: 7

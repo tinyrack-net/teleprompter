@@ -36,7 +36,9 @@ export class Speech {
   start(lang: string): void {
     const Ctor = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!Ctor) {
-      this.cb.onError('This browser does not support speech recognition. Try Chrome, Edge or Safari.');
+      this.cb.onError(
+        'This browser does not support speech recognition. Try Chrome, Edge or Safari.',
+      );
       return;
     }
     this.stop();
@@ -49,7 +51,7 @@ export class Speech {
     rec.onresult = (e: any) => {
       let transcript = '';
       for (let i = 0; i < e.results.length; i++) {
-        transcript += ' ' + e.results[i][0].transcript;
+        transcript += ` ${e.results[i][0].transcript}`;
       }
       this.cb.onTranscript(transcript);
     };

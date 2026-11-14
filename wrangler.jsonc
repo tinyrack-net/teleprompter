@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tinyrack-teleprompter",
+  "compatibility_date": "2026-11-01",
+  "routes": [
+    {
+      "pattern": "prompter.tinyrack.net",
+      "custom_domain": true
+    }
+  ],
+  // Static single-page app; no Worker script is needed.
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  },
+  // Disable the *.workers.dev URL so the custom domain is the only entry point.
+  "workers_dev": false,
+  "preview_urls": false
+}
