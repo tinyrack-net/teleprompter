@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Web Teleprompter</title>
+  </head>
+  <body>
+    <main id="editor" class="editor">
+      <header>
+        <h1>Web Teleprompter</h1>
+        <p class="muted">Paste your script, press Start, and read aloud. The text follows your voice.</p>
+      </header>
+
+      <p id="unsupported" class="warning" hidden>
+        Speech recognition is not available in this browser. Use Chrome, Edge or Safari.
+      </p>
+
+      <textarea id="script-input" spellcheck="false" placeholder="Paste your script here…"></textarea>
+      <p class="muted small">Tip: text in [square brackets] is shown but skipped while reading.</p>
+
+      <div class="controls">
+        <label>
+          Language
+          <select id="lang">
+            <option value="ko-KR">한국어</option>
+            <option value="en-US">English (US)</option>
+            <option value="ja-JP">日本語</option>
+            <option value="zh-CN">中文</option>
+          </select>
+        </label>
+        <label>
+          Font size <span id="font-size-value"></span>
+          <input id="font-size" type="range" min="24" max="96" step="2" />
+        </label>
+        <label class="check">
+          <input id="mirror" type="checkbox" />
+          Mirror
+        </label>
+        <button id="start" class="primary">Start</button>
+      </div>
+    </main>
+
+    <section id="prompter" class="prompter" hidden>
+      <div class="progress"><div id="progress"></div></div>
+      <div id="scroller" class="scroller">
+        <div class="reading-line" aria-hidden="true"></div>
+        <div id="text" class="text"></div>
+      </div>
+      <p id="error" class="error" hidden></p>
+      <footer class="dock">
+        <button id="back" title="Back to editor (Esc)">← Edit</button>
+        <button id="restart" title="Restart (Home)">↺ Restart</button>
+        <button id="mic" class="mic" title="Start/stop listening (Space)">● Listen</button>
+        <span id="transcript" class="transcript"></span>
+      </footer>
+    </section>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
