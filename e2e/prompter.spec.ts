@@ -12,6 +12,7 @@ async function installFakeSpeech(page: Page) {
       onresult: ((e: unknown) => void) | null = null;
       onerror: ((e: unknown) => void) | null = null;
       onend: (() => void) | null = null;
+      onaudiostart: (() => void) | null = null;
       constructor() {
         w.__recognition = this;
       }
@@ -25,10 +26,18 @@ async function installFakeSpeech(page: Page) {
     w.__say = (text: string) => {
       w.__recognition?.onresult?.({ results: [[{ transcript: text }]] });
     };
+    /** Browser-style failure: an error event, then the session ends. */
+    w.__fail = (error: string) => {
+      const rec = w.__recognition;
+      rec?.onerror?.({ error });
+      rec?.onend?.();
+    };
+    w.__audioStart = () => w.__recognition?.onaudiostart?.();
   });
 }
 
 const say = (page: Page, text: string) => page.evaluate((t) => (window as any).__say(t), text);
+const fail = (page: Page, error: string) => page.evaluate((e) => (window as any).__fail(e), error);
 const recognitionLangs = (page: Page) =>
   page.evaluate(() => (window as any).__recognitionLangs as string[]);
 const lastRecognitionLang = async (page: Page) => (await recognitionLangs(page)).at(-1);
@@ -232,6 +241,99 @@ test('the fullscreen button is hidden when the browser cannot go fullscreen', as
   await page.reload();
   await expect(toolbar(page).getByRole('button', { name: 'Settings' })).toBeVisible();
   await expect(toolbar(page).getByRole('button', { name: /fullscreen/i })).toHaveCount(0);
+});
+
+test('audio interruptions show only in the status pill and clear themselves', async ({ page }) => {
+  await startListening(page);
+  const status = page.locator('.prompter-status');
+  await expect(status).toHaveAttribute('data-state', 'listening');
+
+  // Silence is normal and is never reported.
+  await fail(page, 'no-speech');
+  await expect(status).toHaveAttribute('data-state', 'listening');
+
+  // A dropout shows a quiet hint, never a popup, and keeps listening.
+  let sessions = (await recognitionLangs(page)).length;
+  await fail(page, 'audio-capture');
+  await expect(status).toHaveAttribute('data-state', 'interrupted');
+  await expect(status).toHaveText(/No microphone input/);
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await expect(toolbar(page).getByRole('button', { name: 'Stop listening' })).toBeVisible();
+
+  // The recognizer retries by itself; once audio flows the hint disappears.
+  await expect.poll(() => recognitionLangs(page).then((l) => l.length)).toBeGreaterThan(sessions);
+  await page.evaluate(() => (window as any).__audioStart());
+  await expect(status).toHaveAttribute('data-state', 'listening');
+  await expect(status).not.toHaveText(/No microphone input/);
+
+  // Network drops recover the same way, here through recognized speech.
+  sessions = (await recognitionLangs(page)).length;
+  await fail(page, 'network');
+  await expect(status).toHaveText(/Reconnecting/);
+  await expect.poll(() => recognitionLangs(page).then((l) => l.length)).toBeGreaterThan(sessions);
+  await say(page, 'welcome to');
+  await expect(status).toHaveAttribute('data-state', 'listening');
+  await expect(page.getByRole('alert')).toHaveCount(0);
+});
+
+test('a blocked microphone is shown in the status pill', async ({ page }) => {
+  await startListening(page);
+  await fail(page, 'not-allowed');
+  const status = page.locator('.prompter-status');
+  await expect(status).toHaveAttribute('data-state', 'denied');
+  await expect(status).toHaveText(/Microphone blocked/);
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await expect(toolbar(page).getByRole('button', { name: 'Start listening' })).toBeVisible();
+
+  // Trying again clears it.
+  await startListening(page);
+  await expect(status).toHaveAttribute('data-state', 'listening');
+});
+
+test('F11 toggles the same fullscreen as the button and stays in sync', async ({ page }) => {
+  const isFullscreen = () => page.evaluate(() => document.fullscreenElement !== null);
+  const button = toolbar(page).getByRole('button', { name: /fullscreen/i });
+
+  await page.keyboard.press('F11');
+  await expect.poll(isFullscreen).toBe(true);
+  await expect(button).toHaveAccessibleName('Exit fullscreen');
+
+  // The button leaves the fullscreen F11 entered...
+  await button.click();
+  await expect.poll(isFullscreen).toBe(false);
+  await expect(button).toHaveAccessibleName('Enter fullscreen');
+
+  // ...and F11 leaves the fullscreen the button entered.
+  await button.click();
+  await expect.poll(isFullscreen).toBe(true);
+  await page.keyboard.press('F11');
+  await expect.poll(isFullscreen).toBe(false);
+  await expect(button).toHaveAttribute('aria-pressed', 'false');
+});
+
+test('the settings panel does not move when dragging inside it', async ({ page }) => {
+  // A tall screen leaves room below the settings; that area used to drag the panel.
+  await page.setViewportSize({ width: 1280, height: 1600 });
+  await openSettings(page);
+  // Measure after the slide-in animation.
+  await page.waitForFunction(() =>
+    document.getAnimations().every((a) => a.playState !== 'running'),
+  );
+  const popup = page.locator('.tr-drawer-popup');
+  const box = await popup.boundingBox();
+  if (!box) throw new Error('settings panel not found');
+
+  for (const fraction of [0.05, 0.5, 0.97]) {
+    const x = box.x + 40;
+    const y = box.y + box.height * fraction;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + 240, y, { steps: 8 });
+    expect(await popup.getAttribute('data-swiping'), `drag at ${fraction}`).toBeNull();
+    expect((await popup.boundingBox())?.x).toBe(box.x);
+    await page.mouse.up();
+  }
+  await expect(drawer(page)).toBeVisible();
 });
 
 test('settings are only in the floating toolbar', async ({ page }) => {

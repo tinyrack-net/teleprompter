@@ -1,4 +1,3 @@
-import { TRAlert } from '@tinyrack/ui/components/alert';
 import { TRButton } from '@tinyrack/ui/components/button';
 import { TRProgress } from '@tinyrack/ui/components/progress';
 import { TRText } from '@tinyrack/ui/components/text';
@@ -14,6 +13,7 @@ import { useScript, useSettings } from '../../state/settings-store';
 import { PlaybackToolbar } from './playback-toolbar';
 import { ScriptView } from './script-view';
 import { useVoiceCursor } from './use-voice-cursor';
+import { VoiceStatusPill } from './voice-status';
 
 /**
  * The app's only screen. It opens paused: recognition starts from the mic
@@ -56,7 +56,7 @@ export function PrompterPage() {
         restart,
         settings: () => setSettingsOpen(true),
         fullscreen: () => {
-          if (fullscreen.supported) void fullscreen.toggle();
+          if (fullscreen.supported && !fullscreen.browserManaged) void fullscreen.toggle();
         },
       });
       if (!action) return;
@@ -124,55 +124,11 @@ export function PrompterPage() {
         </div>
       )}
 
-      {voice.error ? (
-        <div className="prompter-alert">
-          <TRAlert.Root
-            variant={voice.error.code === 'unsupported' ? 'warning' : 'danger'}
-            role="alert"
-          >
-            <TRAlert.Title>
-              {voice.error.code === 'unsupported'
-                ? t.unsupportedTitle
-                : voice.error.code === 'denied'
-                  ? t.micDeniedTitle
-                  : t.speechErrorTitle}
-            </TRAlert.Title>
-            <TRAlert.Description>
-              {voice.error.code === 'unsupported'
-                ? t.unsupportedBody
-                : voice.error.code === 'denied'
-                  ? t.micDeniedBody
-                  : t.speechErrorBody(voice.error.detail ?? '')}
-            </TRAlert.Description>
-            <TRAlert.Actions>
-              <TRButton appearance="outline" uiSize="sm" onClick={voice.dismissError}>
-                {t.dismiss}
-              </TRButton>
-            </TRAlert.Actions>
-          </TRAlert.Root>
-        </div>
-      ) : null}
-
-      <div className="prompter-status" aria-live="polite">
-        <TRText variant="caption" color="muted" className="prompter-status-state">
-          {voice.listening ? t.listening : t.paused}
-        </TRText>
-        {voice.heard ? (
-          <TRText
-            variant="caption"
-            color="muted"
-            truncate
-            className="prompter-heard"
-            title={t.heard}
-          >
-            {voice.heard}
-          </TRText>
-        ) : null}
-      </div>
+      <VoiceStatusPill status={voice.status} heard={voice.heard} />
 
       <PlaybackToolbar
         listening={voice.listening}
-        canListen={!empty && voice.error?.code !== 'unsupported'}
+        canListen={!empty && voice.status.kind !== 'unsupported'}
         onRestart={restart}
         onPrev={prev}
         onToggle={toggle}
@@ -180,7 +136,11 @@ export function PrompterPage() {
         onSettings={() => setSettingsOpen(true)}
         fullscreen={
           fullscreen.supported
-            ? { active: fullscreen.active, onToggle: () => void fullscreen.toggle() }
+            ? {
+                active: fullscreen.active,
+                browserManaged: fullscreen.browserManaged,
+                onToggle: () => void fullscreen.toggle(),
+              }
             : undefined
         }
       />

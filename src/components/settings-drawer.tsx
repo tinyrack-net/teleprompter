@@ -73,7 +73,7 @@ export function SettingsDrawer({
                 : true
             }
           >
-            <TRDrawer.Content className="flex flex-col gap-tinyrack-lg">
+            <TRDrawer.Content className="settings-content flex flex-col gap-tinyrack-lg">
               <header className="flex items-start justify-between gap-tinyrack-md">
                 <div className="flex flex-col gap-tinyrack-2xs">
                   <TRDrawer.Title>{t.settings}</TRDrawer.Title>

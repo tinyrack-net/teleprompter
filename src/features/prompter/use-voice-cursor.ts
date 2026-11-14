@@ -1,12 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { match, toSpokenWords } from '../../lib/matcher';
 import { nextSpoken, prevSpoken, remapCursor, type Token } from '../../lib/script';
-import { isSpeechSupported, Speech, type SpeechErrorCode } from '../../lib/speech';
+import {
+  type InterruptReason,
+  isSpeechSupported,
+  Speech,
+  type SpeechHealth,
+} from '../../lib/speech';
 
-export interface SpeechError {
-  code: SpeechErrorCode;
-  detail?: string;
-}
+/**
+ * What the status pill shows.
+ * - `idle`: not listening (paused by the user).
+ * - `listening`: working.
+ * - `interrupted`: retrying after a transient problem; clears itself.
+ * - `denied`: microphone blocked; the user has to allow it.
+ * - `unsupported`: the browser has no speech recognition.
+ */
+export type VoiceStatus =
+  | { kind: 'idle' | 'listening' | 'denied' | 'unsupported' }
+  | { kind: 'interrupted'; reason: InterruptReason };
 
 /**
  * Tracks the reading position in `tokens` and moves it as speech is recognized.
@@ -16,9 +28,10 @@ export function useVoiceCursor(tokens: Token[], locale: string) {
   const [cursor, setCursorState] = useState(() => nextSpoken(tokens, 0));
   const [listening, setListening] = useState(false);
   const [heard, setHeard] = useState('');
-  const [error, setError] = useState<SpeechError | null>(
-    isSpeechSupported() ? null : { code: 'unsupported' },
+  const [health, setHealth] = useState<{ health: SpeechHealth; reason?: InterruptReason } | null>(
+    null,
   );
+  const supported = isSpeechSupported();
 
   const cursorRef = useRef(cursor);
   const tokensRef = useRef(tokens);
@@ -58,8 +71,8 @@ export function useVoiceCursor(tokens: Token[], locale: string) {
         if (next !== null && next !== cursorRef.current) setCursor(next);
       },
       onListeningChange: setListening,
-      onError(code, detail) {
-        setError({ code, detail });
+      onHealthChange(next, reason) {
+        setHealth({ health: next, reason });
       },
     });
   }
@@ -68,7 +81,6 @@ export function useVoiceCursor(tokens: Token[], locale: string) {
   const start = useCallback(() => {
     ignoreBefore.current = 0;
     lastWordCount.current = 0;
-    setError((e) => (e?.code === 'unsupported' ? e : null));
     speech.start(localeRef.current);
   }, [speech]);
 
@@ -111,8 +123,7 @@ export function useVoiceCursor(tokens: Token[], locale: string) {
     cursor,
     listening,
     heard,
-    error,
-    dismissError: () => setError(null),
+    status: voiceStatus(supported, listening, health),
     start,
     stop,
     toggle,
@@ -121,4 +132,17 @@ export function useVoiceCursor(tokens: Token[], locale: string) {
     prev,
     restart,
   };
+}
+
+function voiceStatus(
+  supported: boolean,
+  listening: boolean,
+  health: { health: SpeechHealth; reason?: InterruptReason } | null,
+): VoiceStatus {
+  if (!supported) return { kind: 'unsupported' };
+  if (health?.health === 'denied') return { kind: 'denied' };
+  if (!listening) return { kind: 'idle' };
+  if (health?.health === 'interrupted')
+    return { kind: 'interrupted', reason: health.reason ?? 'service' };
+  return { kind: 'listening' };
 }

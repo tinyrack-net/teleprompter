@@ -20,7 +20,12 @@ interface PlaybackToolbarProps {
   onNext: () => void;
   onSettings: () => void;
   /** Omitted when the browser cannot go fullscreen (e.g. iPhone Safari). */
-  fullscreen?: { active: boolean; onToggle: () => void };
+  fullscreen?: {
+    active: boolean;
+    /** Browser fullscreen (F11 / menu) that only the browser can leave. */
+    browserManaged: boolean;
+    onToggle: () => void;
+  };
 }
 
 /** Floating, semi-transparent playback controls at the bottom of the prompter. */
@@ -66,7 +71,13 @@ export function PlaybackToolbar(props: PlaybackToolbarProps) {
           <TRToolbar.Button
             aria-label={props.fullscreen.active ? t.exitFullscreen : t.enterFullscreen}
             aria-pressed={props.fullscreen.active}
-            title={`${props.fullscreen.active ? t.exitFullscreen : t.enterFullscreen} (F)`}
+            title={
+              props.fullscreen.browserManaged
+                ? t.exitBrowserFullscreen
+                : `${props.fullscreen.active ? t.exitFullscreen : t.enterFullscreen} (F)`
+            }
+            // A page cannot leave fullscreen the browser entered on its own.
+            disabled={props.fullscreen.browserManaged}
             onClick={props.fullscreen.onToggle}
           >
             {props.fullscreen.active ? (

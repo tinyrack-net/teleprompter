@@ -12,6 +12,7 @@ Live at [prompter.tinyrack.net](https://prompter.tinyrack.net).
 - Click any word to jump to it
 - Floating, semi-transparent playback controls, including fullscreen and settings buttons (the fullscreen button is hidden where the browser cannot go fullscreen, such as iPhone Safari)
 - Opens paused, so the microphone is only requested when you press the mic button
+- Voice status lives in a small pill in the top-left corner; brief audio or network dropouts retry automatically and the hint clears itself once audio is back (no popups)
 - Editing the script keeps your reading position
 - Settings (saved in `localStorage`):
   - Script
@@ -22,13 +23,13 @@ Live at [prompter.tinyrack.net](https://prompter.tinyrack.net).
 
 ## Keyboard shortcuts
 
-| Key        | Action                       |
-| ---------- | ---------------------------- |
-| `Space`    | Start / stop listening       |
-| `←` / `→`  | Move one word back / forward |
-| `Home`     | Restart from the beginning   |
-| `S` or `,` | Open settings                |
-| `F`        | Toggle fullscreen            |
+| Key         | Action                       |
+| ----------- | ---------------------------- |
+| `Space`     | Start / stop listening       |
+| `←` / `→`   | Move one word back / forward |
+| `Home`      | Restart from the beginning   |
+| `S` or `,`  | Open settings                |
+| `F` / `F11` | Toggle fullscreen            |
 
 ## Browser support
 

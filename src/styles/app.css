@@ -10,7 +10,6 @@
 @import "@fontsource/ibm-plex-sans-jp/600.css";
 @import "tailwindcss";
 @import "@tinyrack/ui/core.css";
-@import "@tinyrack/ui/components/alert.css";
 @import "@tinyrack/ui/components/button.css";
 @import "@tinyrack/ui/components/drawer.css";
 @import "@tinyrack/ui/components/field.css";
@@ -46,6 +45,17 @@ body {
 }
 
 /* ---------- Settings ---------- */
+
+/*
+ * The content fills the whole side panel. Base UI swipes the drawer on any
+ * pointer drag that starts outside Drawer.Content, so on tall (fullscreen)
+ * screens the empty strip under the content dragged the whole panel sideways.
+ */
+.settings-content.settings-content {
+  box-sizing: border-box;
+  height: 100%;
+  max-height: none;
+}
 
 .settings-script {
   min-height: var(--tinyrack-measure-lg);
@@ -242,11 +252,50 @@ body {
   background: var(--floating-surface);
   backdrop-filter: var(--floating-blur);
   border-radius: var(--tinyrack-radius-full);
-  pointer-events: none;
+  color: var(--tinyrack-text-muted);
+  /* Hover reveals the hint (title) for blocked or unsupported voice. */
+  pointer-events: auto;
 }
 
 .prompter-status-state {
   flex: none;
+  color: inherit;
+}
+
+.prompter-status-dot {
+  flex: none;
+  width: var(--tinyrack-space-sm);
+  height: var(--tinyrack-space-sm);
+  border-radius: var(--tinyrack-radius-full);
+  background: var(--tinyrack-border-strong);
+}
+
+.prompter-status[data-state="listening"] .prompter-status-dot {
+  background: var(--tinyrack-success);
+}
+
+.prompter-status[data-state="interrupted"] {
+  color: var(--tinyrack-warning-foreground);
+}
+
+.prompter-status[data-state="interrupted"] .prompter-status-dot {
+  background: var(--tinyrack-warning-foreground);
+  animation: prompter-pulse var(--tinyrack-duration-loading) var(--tinyrack-ease-standard) infinite
+    alternate;
+}
+
+.prompter-status:is([data-state="denied"], [data-state="unsupported"]) {
+  color: var(--tinyrack-danger-foreground);
+}
+
+.prompter-status:is([data-state="denied"], [data-state="unsupported"]) .prompter-status-dot {
+  background: var(--tinyrack-danger-foreground);
+}
+
+@keyframes prompter-pulse {
+  to {
+    opacity: var(--tinyrack-opacity-disabled);
+  }
 }
 
 .prompter-heard {
@@ -266,23 +315,14 @@ body {
   text-align: center;
 }
 
-.prompter-alert {
-  position: absolute;
-  inset-inline: var(--tinyrack-space-lg);
-  top: calc(var(--tinyrack-space-3xl) + var(--tinyrack-space-sm));
-  z-index: var(--tinyrack-layer-chrome);
-  display: flex;
-  justify-content: center;
-}
-
-.prompter-alert > * {
-  max-width: var(--tinyrack-overlay-width-md);
-}
-
 @media (prefers-reduced-motion: reduce) {
   .prompter-text > span,
   .prompter-toolbar.prompter-toolbar {
     transition: none;
+  }
+
+  .prompter-status-dot {
+    animation: none;
   }
 }
 
